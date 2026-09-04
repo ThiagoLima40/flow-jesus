@@ -1,0 +1,264 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   FLOW JESUS — DESIGN TOKENS
+   ============================================================ */
+:root {
+  --ink: #050505;
+  --ink-soft: #0c0c0d;
+  --white: #ffffff;
+  --yellow: #ffc400;
+  --pink: #ff006e;
+  --cyan: #00d9ff;
+  --red: #ff3b1d;
+
+  --container: 1360px;
+
+  --z-header: 60;
+  --z-drawer: 80;
+  --z-player: 70;
+  --z-modal: 90;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--ink);
+  color: var(--white);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--pink);
+  color: #fff;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a2c;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pink);
+}
+
+/* ============================================================
+   TEXTURES — noise / grain / paper
+   ============================================================ */
+/* Em @layer components para que utilitários de posição do Tailwind
+   (fixed/absolute) sempre vençam o position:relative do host. */
+@layer components {
+  .tex-noise {
+    position: relative;
+  }
+}
+.tex-noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Page-level grain overlay (fixed) */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* Subtle radial paint glows for section backgrounds */
+.bg-street {
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(60% 50% at 12% 8%, rgba(0, 217, 255, 0.08), transparent 60%),
+    radial-gradient(55% 45% at 92% 22%, rgba(255, 0, 110, 0.09), transparent 60%),
+    radial-gradient(50% 40% at 78% 92%, rgba(255, 196, 0, 0.06), transparent 60%);
+}
+
+/* ============================================================
+   TYPOGRAPHY HELPERS
+   ============================================================ */
+.font-brush {
+  font-family: var(--font-brush), cursive;
+  letter-spacing: 0.01em;
+}
+.font-display {
+  font-family: var(--font-display), sans-serif;
+}
+
+.headline {
+  font-family: var(--font-brush), cursive;
+  line-height: 0.9;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+}
+
+.txt-stroke {
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.9);
+  color: transparent;
+}
+
+.tracking-street {
+  letter-spacing: 0.28em;
+}
+
+/* Ink drop-shadow for painted titles */
+.ink-shadow {
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   BRUSH UNDERLINE
+   ============================================================ */
+.brush-underline {
+  position: relative;
+  display: inline-block;
+}
+.brush-underline::after {
+  content: "";
+  position: absolute;
+  left: -4%;
+  bottom: -0.22em;
+  width: 108%;
+  height: 0.28em;
+  background: var(--pink);
+  clip-path: polygon(0 40%, 8% 10%, 22% 55%, 40% 20%, 60% 60%, 80% 22%, 100% 55%, 96% 100%, 70% 70%, 45% 100%, 25% 68%, 4% 95%);
+  transform: rotate(-1deg);
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  padding: 0.95rem 1.8rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  position: relative;
+  clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 100%);
+}
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+.btn-pink {
+  background: var(--pink);
+  color: #fff;
+}
+.btn-pink:hover {
+  box-shadow: 0 0 34px -6px rgba(255, 0, 110, 0.75);
+  transform: translateY(-2px);
+}
+.btn-outline {
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  color: #fff;
+}
+.btn-outline:hover {
+  background: #fff;
+  color: var(--ink);
+  transform: translateY(-2px);
+}
+.btn-yellow {
+  background: var(--yellow);
+  color: var(--ink);
+}
+.btn-yellow:hover {
+  box-shadow: 0 0 34px -6px rgba(255, 196, 0, 0.7);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   TAPE / STICKER LABELS
+   ============================================================ */
+.sticker {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  padding: 0.35rem 0.8rem;
+  display: inline-block;
+  background: #000;
+}
+
+.tape {
+  background: rgba(255, 196, 0, 0.85);
+  color: #000;
+  transform: rotate(-3deg);
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.1em;
+}
+
+/* Marquee */
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: marquee 26s linear infinite;
+}
+
+/* Hairline top rule */
+.rule-street {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+}
+
+/* Focus visibility for accessibility */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Utility: hide scrollbar for horizontal carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
