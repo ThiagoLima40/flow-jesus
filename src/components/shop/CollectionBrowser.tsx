@@ -7,7 +7,7 @@ import { products, categories, type Product } from "@/data/products";
 import { ProductCard } from "./ProductCard";
 import { Cross } from "@/components/ui/Graphics";
 
-const SIZES = ["P", "M", "G", "GG", "XG"];
+const SIZES = ["P", "M", "G", "GG"];
 const COLORS = [
   { name: "Preto", hex: "#0a0a0a" },
   { name: "Branco", hex: "#f4f1ea" },
@@ -155,7 +155,7 @@ export function CollectionBrowser() {
                 <p className="text-sm text-white/50">Tente ajustar os filtros.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((p, i) => (
                   <ProductCard key={p.id} product={p} index={i} />
                 ))}

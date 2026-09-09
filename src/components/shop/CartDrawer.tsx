@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useEffect } from "react";
 import { useCart } from "@/context/CartContext";
-import { formatBRL } from "@/data/products";
+import { formatBRL, getProductImages } from "@/data/products";
 import { StreetImage } from "@/components/ui/StreetImage";
 import { Button } from "@/components/ui/Button";
 import { Cross } from "@/components/ui/Graphics";
@@ -68,7 +68,7 @@ export function CartDrawer() {
                     return (
                       <div key={`${item.productId}-${item.size}-${item.color}`} className="flex gap-3 border-b border-white/10 pb-4">
                         <StreetImage
-                          src={p.images[0]}
+                          src={getProductImages(p, item.color)[0]}
                           alt={p.name}
                           kind="product"
                           accent={p.accent}

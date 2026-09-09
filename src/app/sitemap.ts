@@ -4,7 +4,7 @@ import { site } from "@/data/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = site.url;
-  const routes = ["", "/colecao", "/historia", "/flow-play", "/flow-bjj", "/galeria", "/sobre", "/contato", "/carrinho"].map(
+  const routes = ["", "/loja", "/colecao", "/historia", "/flow-play", "/flow-bjj", "/galeria", "/sobre", "/contato", "/carrinho"].map(
     (r) => ({
       url: `${base}${r}`,
       changeFrequency: "weekly" as const,

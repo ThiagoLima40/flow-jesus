@@ -18,6 +18,7 @@ const accentHex: Record<Accent, string> = {
  */
 export function StreetImage({
   src,
+  fit = "cover",
   alt,
   kind = "photo",
   accent = "pink",
@@ -27,6 +28,7 @@ export function StreetImage({
   sizes = "(max-width: 768px) 100vw, 50vw",
 }: {
   src?: string;
+  fit?: "cover" | "contain";
   alt: string;
   kind?: Kind;
   accent?: Accent;
@@ -38,7 +40,7 @@ export function StreetImage({
   if (src) {
     return (
       <div className={`relative overflow-hidden ${className}`}>
-        <Image src={src} alt={alt} fill priority={priority} sizes={sizes} className="object-cover" />
+        <Image src={src} alt={alt} fill priority={priority} sizes={sizes} className={fit === "contain" ? "object-contain" : "object-cover"} />
       </div>
     );
   }

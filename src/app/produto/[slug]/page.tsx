@@ -26,7 +26,7 @@ export default function ProdutoPage({ params }: { params: { slug: string } }) {
 
   return (
     <>
-      <ProductDetail product={product} />
+      <ProductDetail key={product.id} product={product} />
       <section className="bg-ink py-16">
         <div className="mx-auto max-w-container px-4 md:px-8">
           <GraffitiTitle as="h2" size="md" underline="cyan" crown={false} className="mb-10">

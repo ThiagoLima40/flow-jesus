@@ -2,7 +2,7 @@ export type NavItem = { label: string; href: string };
 
 export const mainNav: NavItem[] = [
   { label: "HOME", href: "/" },
-  { label: "COLEÇÃO", href: "/colecao" },
+  { label: "LOJA", href: "/loja" },
   { label: "HISTÓRIA", href: "/historia" },
   { label: "FLOW PLAY", href: "/flow-play" },
   { label: "FLOW BJJ", href: "/flow-bjj" },
@@ -13,7 +13,7 @@ export const mainNav: NavItem[] = [
 export const footerLinks = {
   links: [
     { label: "Home", href: "/" },
-    { label: "Coleção", href: "/colecao" },
+    { label: "Loja", href: "/loja" },
     { label: "História", href: "/historia" },
     { label: "Flow BJJ", href: "/flow-bjj" },
     { label: "Flow Play", href: "/flow-play" },
@@ -28,9 +28,9 @@ export const footerLinks = {
     { label: "Seja um embaixador", href: "/contato" },
   ],
   ajuda: [
-    { label: "Perguntas Frequentes", href: "/contato" },
-    { label: "Trocas e Devoluções", href: "/contato" },
-    { label: "Política de Privacidade", href: "/sobre" },
-    { label: "Termos de Uso", href: "/sobre" },
+    { label: "Perguntas Frequentes", href: "/faq" },
+    { label: "Trocas e Devoluções", href: "/trocas-e-devolucoes" },
+    { label: "Política de Privacidade", href: "/politica-de-privacidade" },
+    { label: "Termos de Uso", href: "/termos-de-uso" },
   ],
 };

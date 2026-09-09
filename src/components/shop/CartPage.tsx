@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { formatBRL } from "@/data/products";
+import { formatBRL, getProductImages } from "@/data/products";
 import { StreetImage } from "@/components/ui/StreetImage";
 import { Button } from "@/components/ui/Button";
 import { Cross } from "@/components/ui/Graphics";
@@ -50,7 +50,7 @@ export function CartPage() {
             return (
               <div key={`${item.productId}-${item.size}-${item.color}`} className="flex gap-4 py-6">
                 <StreetImage
-                  src={p.images[0]}
+                  src={getProductImages(p, item.color)[0]}
                   alt={p.name}
                   kind="product"
                   accent={p.accent}

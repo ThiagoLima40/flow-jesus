@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Shield, Truck, RefreshCw, Ruler, Minus, Plus } from "lucide-react";
-import { type Product, formatBRL } from "@/data/products";
+import { type Product, formatBRL, getProductImages } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { StreetImage } from "@/components/ui/StreetImage";
 import { Badge } from "@/components/ui/Badge";
@@ -17,6 +17,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const [color, setColor] = useState(product.colors[0]?.name ?? "Preto");
   const [qty, setQty] = useState(1);
   const [active, setActive] = useState(0);
+  const images = getProductImages(product, color);
   const installment = formatBRL(product.price / 3);
 
   const add = () => addItem(product.id, size, color, qty);
@@ -32,7 +33,7 @@ export function ProductDetail({ product }: { product: Product }) {
           {/* GALERIA */}
           <div className="flex flex-col-reverse gap-4 md:flex-row">
             <div className="flex gap-3 md:flex-col">
-              {[0, 1, 2, 3].map((i) => (
+              {images.map((src, i) => (
                 <button
                   key={i}
                   onClick={() => setActive(i)}
@@ -40,7 +41,8 @@ export function ProductDetail({ product }: { product: Product }) {
                   aria-label={`Ver imagem ${i + 1}`}
                 >
                   <StreetImage
-                    src={product.images[i]}
+                    src={src}
+                    fit="contain"
                     alt={`${product.name} ${i + 1}`}
                     kind="product"
                     accent={i % 2 ? "cyan" : product.accent}
@@ -57,7 +59,8 @@ export function ProductDetail({ product }: { product: Product }) {
                 </div>
               )}
               <StreetImage
-                src={product.images[active]}
+                src={images[active] ?? images[0]}
+                fit="contain"
                 alt={product.name}
                 kind="product"
                 accent={active % 2 ? "cyan" : product.accent}
@@ -86,7 +89,8 @@ export function ProductDetail({ product }: { product: Product }) {
                 {product.colors.map((c) => (
                   <button
                     key={c.name}
-                    onClick={() => setColor(c.name)}
+                    onClick={() => { setColor(c.name); setActive(0); }}
+                    aria-pressed={color === c.name}
                     className={`flex items-center gap-2 border px-3 py-1.5 text-sm ${color === c.name ? "border-brand-pink" : "border-white/20"}`}
                   >
                     <span className="h-4 w-4 rounded-full border border-white/30" style={{ background: c.hex }} />
@@ -109,6 +113,7 @@ export function ProductDetail({ product }: { product: Product }) {
                   <button
                     key={s}
                     onClick={() => setSize(s)}
+                    aria-pressed={size === s}
                     className={`h-11 min-w-11 border px-3 font-display text-sm ${size === s ? "border-brand-pink bg-brand-pink text-white" : "border-white/20 text-white/80"}`}
                   >
                     {s}
@@ -162,7 +167,10 @@ export function ProductDetail({ product }: { product: Product }) {
               <span className="text-brand-yellow">TRÁS DA ARTE</span>
             </h2>
           </div>
-          <p className="max-w-2xl text-lg leading-relaxed text-white/75">{product.story}</p>
+          <div className="max-w-2xl space-y-4">
+            <p className="text-lg leading-relaxed text-white/75">{product.story}</p>
+            {product.biblicalReference && <p className="text-brand-yellow">Referência na estampa: {product.biblicalReference}</p>}
+          </div>
         </div>
       </div>
     </section>

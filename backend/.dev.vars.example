@@ -1,0 +1,5 @@
+# Copie para .dev.vars SOMENTE para desenvolvimento local; não versione esse arquivo.
+MELHOR_ENVIO_CLIENT_ID=""
+MELHOR_ENVIO_CLIENT_SECRET=""
+MELHOR_ENVIO_ADMIN_PASSWORD=""
+MELHOR_ENVIO_TOKEN_KEY=""
