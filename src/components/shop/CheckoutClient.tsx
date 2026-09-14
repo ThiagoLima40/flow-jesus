@@ -20,10 +20,12 @@ function Field({ label, type = "text", full = false }: { label: string; type?: s
 }
 
 export function CheckoutClient() {
-  const { items, getProduct, subtotal, clearCart } = useCart();
+  const { items, getProduct, subtotal } = useCart();
   const [step, setStep] = useState(0);
   const [ship, setShip] = useState("normal");
   const [pay, setPay] = useState("pix");
+  const [submitting, setSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const shipCost = ship === "expressa" ? 34.9 : subtotal > 250 ? 0 : 19.9;
   const total = subtotal + shipCost;
 
@@ -37,8 +39,28 @@ export function CheckoutClient() {
     );
   }
 
-  const next = () => {
-    if (step === 3) clearCart();
+  const next = async () => {
+    if (step === 3) {
+      if (submitting) return;
+      setSubmitting(true);
+      setCheckoutError("");
+      try {
+        const response = await fetch("/api/mercadopago/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items, shipping: ship }),
+        });
+        const result = await response.json();
+        if (!response.ok || typeof result.checkout_url !== "string") {
+          throw new Error(result.error || "Não foi possível iniciar o pagamento.");
+        }
+        window.location.assign(result.checkout_url);
+      } catch (error) {
+        setCheckoutError(error instanceof Error ? error.message : "Não foi possível iniciar o pagamento.");
+        setSubmitting(false);
+      }
+      return;
+    }
     setStep((s) => Math.min(steps.length - 1, s + 1));
   };
   const back = () => setStep((s) => Math.max(0, s - 1));
@@ -127,16 +149,7 @@ export function CheckoutClient() {
                   </button>
                 ))}
               </div>
-              {pay === "cartao" && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Número do cartão" full />
-                  <Field label="Nome no cartão" full />
-                  <Field label="Validade" />
-                  <Field label="CVV" />
-                </div>
-              )}
-              {pay === "pix" && <p className="text-sm text-white/60">Um QR Code Pix seria gerado aqui. (Integração futura — nenhum pagamento real é processado.)</p>}
-              {pay === "boleto" && <p className="text-sm text-white/60">O boleto seria gerado aqui. (Integração futura.)</p>}
+              <p className="text-sm text-white/60">Você será redirecionado ao Mercado Pago para escolher e concluir o pagamento com segurança.</p>
               <p className="flex items-center gap-2 text-xs text-white/40">
                 <Lock className="h-3.5 w-3.5" /> Ambiente seguro · nenhum dado de cartão é armazenado.
               </p>
@@ -162,11 +175,12 @@ export function CheckoutClient() {
               <button onClick={back} disabled={step === 0} className="flex items-center gap-1 text-sm text-white/60 disabled:opacity-30">
                 <ChevronLeft className="h-4 w-4" /> Voltar
               </button>
-              <button onClick={next} className="btn btn-pink">
-                {step === 3 ? "FINALIZAR PEDIDO" : "CONTINUAR"} <ChevronRight className="h-4 w-4" />
+              <button onClick={next} disabled={submitting} className="btn btn-pink disabled:opacity-50">
+                {submitting ? "AGUARDE..." : step === 3 ? "FINALIZAR PEDIDO" : "CONTINUAR"} <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           )}
+          {checkoutError && <p role="alert" className="mt-4 text-sm text-brand-pink">{checkoutError}</p>}
         </div>
 
         {/* resumo */}
