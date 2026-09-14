@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { products } from "@/data/products";
 
 export const runtime = "nodejs";
@@ -12,7 +13,13 @@ function redactCredentials(value: string, credentials: string[]) {
 type CheckoutItem = { productId: string; size: string; color: string; qty: number };
 
 export async function POST(request: NextRequest) {
-  const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  let token: string | undefined;
+  try {
+    token = (getCloudflareContext().env as { MERCADOPAGO_ACCESS_TOKEN?: string }).MERCADOPAGO_ACCESS_TOKEN;
+  } catch {
+    // O Next.js fora do Cloudflare não tem bindings; usa a variável local.
+    token = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  }
   if (!token) {
     console.error("Mercado Pago checkout unavailable", {
       endpoint: mercadoPagoCheckoutEndpoint,
