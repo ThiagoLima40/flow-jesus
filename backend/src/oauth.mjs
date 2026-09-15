@@ -1,18 +1,37 @@
 import { decrypt, encrypt, random } from './crypto.mjs';
+import { safeErrorBody, logOAuthFailure, TokenExchangeError } from './oauth-diagnostics.mjs';
 const DAY = 86400000;
 export class OAuthError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 async function exchange(cfg, grant, fetchImpl) {
-  const response = await fetchImpl(`${cfg.baseUrl}/oauth/token`, {
-    method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000),
-    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': cfg.userAgent },
-    body: new URLSearchParams({ client_id: cfg.clientId, client_secret: cfg.clientSecret, ...grant }),
-  });
-  if (!response.ok) throw new Error('Provider rejected exchange');
-  const value = await response.json();
-  if (typeof value.access_token !== 'string' || !value.access_token || typeof value.refresh_token !== 'string' || !value.refresh_token ||
-      typeof value.token_type !== 'string' || value.token_type.toLowerCase() !== 'bearer' || !Number.isFinite(value.expires_in) || value.expires_in <= 0 || value.expires_in > 365 * 86400) throw new Error('Invalid token response');
+  let response;
+  try {
+    response = await fetchImpl(`${cfg.baseUrl}/oauth/token`, {
+      method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(15000),
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': cfg.userAgent },
+      body: new URLSearchParams({ client_id: cfg.clientId, client_secret: cfg.clientSecret, ...grant }).toString(),
+    });
+  } catch (error) {
+    // Exception messages can contain request credentials. Only classify by name.
+    throw new TokenExchangeError(null, ['TimeoutError', 'AbortError'].includes(error?.name)
+      ? 'Tempo limite excedido antes de receber resposta HTTP do Melhor Envio.'
+      : 'Falha de transporte antes de receber resposta HTTP do Melhor Envio.');
+  }
+  if (response.status >= 300 && response.status < 400) throw new TokenExchangeError(response.status, 'Endpoint OAuth retornou redirecionamento; código não reenviado.');
+  let value;
+  try { value = await response.json(); }
+  catch {
+    throw new TokenExchangeError(response.status, 'Resposta não JSON ou ilegível; conteúdo omitido por segurança.');
+  }
+  if (!response.ok) {
+    const safe = safeErrorBody(value, [cfg.clientSecret, grant.code, grant.refresh_token]);
+    throw new TokenExchangeError(response.status, typeof safe === 'string' ? safe : Object.entries(safe).map(([key, value]) => `${key}: ${value}`).join('; '));
+  }
+  if (!value || typeof value.access_token !== 'string' || !value.access_token || typeof value.refresh_token !== 'string' || !value.refresh_token ||
+      typeof value.token_type !== 'string' || value.token_type.toLowerCase() !== 'bearer' || !Number.isFinite(value.expires_in) || value.expires_in <= 0 || value.expires_in > 365 * 86400) {
+    throw new TokenExchangeError(response.status, 'Resposta de token inválida; conteúdo omitido por segurança.');
+  }
   return { access_token: value.access_token, refresh_token: value.refresh_token, token_type: 'Bearer', expires_in: value.expires_in };
 }
 async function persist(store, cfg, owner, tokens, now) {
@@ -22,13 +41,17 @@ export async function authorizeCode(store, cfg, code, fetchImpl = fetch, now = D
   const owner = random();
   if (!await store.acquire(cfg.connectionId, owner, now, true)) throw new OAuthError(409, 'Outra autorização ou renovação está em andamento. Tente novamente.');
   let attempted = false;
+  let stage = 'token_exchange';
   try {
     attempted = true;
     const tokens = await exchange(cfg, { grant_type: 'authorization_code', redirect_uri: cfg.redirectUri, code }, fetchImpl);
+    stage = 'token_persistence';
     await persist(store, cfg, owner, tokens, now);
-  } catch {
+  } catch (error) {
+    const diagnostic = error instanceof TokenExchangeError ? error.diagnostic : { http_status: null, message: stage === 'token_persistence' ? 'Falha ao criptografar ou persistir tokens.' : 'Falha interna na troca OAuth.' };
+    logOAuthFailure(stage, diagnostic.http_status, diagnostic.message);
     await store.release(cfg.connectionId, owner, attempted);
-    throw new OAuthError(502, 'Não foi possível concluir a autorização. Inicie novamente.');
+    throw new OAuthError(502, `Não foi possível concluir a autorização. Inicie novamente.\nHTTP Melhor Envio: ${diagnostic.http_status ?? 'sem resposta'}.\n${diagnostic.message}`);
   }
 }
 export async function refreshIfNeeded(store, cfg, fetchImpl = fetch, now = Date.now()) {
@@ -52,7 +75,8 @@ export async function refreshIfNeeded(store, cfg, fetchImpl = fetch, now = Date.
     const renewed = await exchange(cfg, { grant_type: 'refresh_token', refresh_token: tokens.refresh_token }, fetchImpl);
     await persist(store, cfg, owner, renewed, now);
     return 'renewed';
-  } catch {
+  } catch (error) {
+    if (error instanceof TokenExchangeError) logOAuthFailure('token_refresh', error.diagnostic.http_status, error.diagnostic.message);
     await store.release(cfg.connectionId, owner, attempted);
     // Network/commit ambiguity: preserve ciphertext but block automatic reuse.
     throw new OAuthError(502, attempted ? 'Renovação não confirmada. Autorize novamente.' : 'Não foi possível ler os tokens. Verifique a configuração.');

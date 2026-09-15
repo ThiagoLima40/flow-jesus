@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   };
   const cartCheckout = shipping !== null && typeof shipping === "object";
   if (!Array.isArray(items) || items.length === 0 || items.length > 50 ||
-      (!cartCheckout && !["normal", "expressa"].includes(shipping as string))) {
+      !cartCheckout) {
     return NextResponse.json({ error: "Itens ou entrega inválidos." }, { status: 400 });
   }
 
@@ -89,15 +89,35 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Mantém compatibilidade com /checkout; /carrinho fornece o frete exibido.
-  let shippingCents = shipping === "expressa" ? 3490 : subtotalCents > 25000 ? 0 : 1990;
+  let shippingCents = 0;
   if (cartCheckout) {
-    const amountCents = (shipping as { amountCents?: unknown }).amountCents;
+    const { amountCents, serviceId, postalCode } = shipping as { amountCents?: unknown; serviceId?: unknown; postalCode?: unknown };
+    if (!Number.isSafeInteger(serviceId) || typeof postalCode !== "string" || !/^\d{8}$/.test(postalCode)) {
+      return NextResponse.json({ error: "Calcule o frete e selecione uma modalidade." }, { status: 400 });
+    }
     const expectedDiscount = coupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0;
     if (!Number.isSafeInteger(amountCents) || (amountCents as number) < 0 ||
         !["", "FLOW10"].includes(coupon as string) || discountCents !== expectedDiscount ||
         !Number.isSafeInteger(totalCents) || totalCents !== subtotalCents - expectedDiscount + (amountCents as number)) {
       return NextResponse.json({ error: "Total, frete ou desconto inválido. Atualize o carrinho." }, { status: 400 });
+    }
+    try {
+      const quoteResponse = await fetch("https://flowjesus-melhor-envio.flowjesusoficial.workers.dev/api/melhor-envio/quote", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toPostalCode: postalCode, products: (items as CheckoutItem[]).map(item => ({
+          id: item.productId, width: 25, height: 8, length: 30, weight: 0.3,
+          insuranceValue: products.find(p => p.id === item.productId)!.price, quantity: item.qty,
+        })) }),
+        cache: "no-store", signal: AbortSignal.timeout(20000),
+      });
+      const quote = await quoteResponse.json();
+      if (!quoteResponse.ok || !Array.isArray(quote.services)) throw new Error("quote unavailable");
+      const service = quote.services.find((option: { id: number }) => option.id === serviceId);
+      if (!service || typeof service.price !== "number" || !Number.isFinite(service.price) || service.price < 0 || Math.round(service.price * 100) !== amountCents) {
+        return NextResponse.json({ error: "O frete mudou ou está indisponível. Calcule novamente e selecione uma opção." }, { status: 409 });
+      }
+    } catch {
+      return NextResponse.json({ error: "Não foi possível confirmar o frete. Calcule novamente." }, { status: 502 });
     }
     shippingCents = amountCents as number;
     // Rateia o desconto em centavos, preservando os produtos e as quantidades.

@@ -12,6 +12,7 @@ Siga [DEPLOY.md](DEPLOY.md) para publicar manualmente. Nenhum comando de instala
 - `GET /api/melhor-envio/callback`: valida cookie/estado e troca o código por tokens.
 - `GET /api/melhor-envio/status`: status e datas de validade, somente para administrador.
 - `POST /api/melhor-envio/refresh`: renova se necessário; exige HTTP Basic e `X-FlowJesus-Admin: 1`. Se houver Origin, deve coincidir com o backend.
+- `POST /api/melhor-envio/quote`: calcula modalidades, preço e prazo; recebe `toPostalCode` e produtos unitários do carrinho. É uma rota pública de cotação e nunca retorna o token.
 
 Nenhuma rota retorna access token, refresh token, Client Secret ou chave de criptografia. CORS não é habilitado; o frontend não participa do OAuth.
 
@@ -29,6 +30,8 @@ Erros ao ler/descriptografar antes da chamada externa preservam os dados e não 
 
 `getAccessToken` é uma função interna para futuras chamadas de frete e faz a verificação/renovação antes de retornar o token ao código do servidor. Frete no checkout não faz parte desta entrega.
 
+A cotação usa `/api/v2/me/shipment/calculate`, `custom_price` e `custom_delivery_time`, com origem definida por `MELHOR_ENVIO_ORIGIN_POSTAL_CODE`.
+
 ## Desenvolvimento e testes
 
 ```sh
@@ -39,6 +42,8 @@ npm run check
 
 Os testes usam o runtime local Miniflare e D1 real emulado, com respostas simuladas do Melhor Envio. Não acessam conta real, banco remoto ou produtos. O dry-run verifica o empacotamento sem publicar. Para servir localmente: `npm run db:local` e `npm run dev`; o modo inicial permite testar `/health`. OAuth ativo requer a origem HTTPS exata cadastrada; o tutorial de publicação resolve essa etapa com workers.dev.
 
-Não versione `.dev.vars`, `.env`, chaves, tokens ou arquivos de estado `.wrangler/`. Logs de requisições automáticos estão desativados no Wrangler para evitar guardar a query do callback. Os únicos logs emitidos pelo código são mensagens estáticas de falha na renovação. Para operação, confira a execução do Cron e `/api/melhor-envio/status`.
+Diagnóstico temporário OAuth: o evento `melhor_envio_oauth_diagnostic` registra somente status HTTP e mensagem sanitizada, sem um segundo evento genérico. Falhas de transporte têm status nulo e mensagem estática. Campos JSON de erro são sanitizados; respostas não JSON e corpos de sucesso são omitidos. A rota administrativa `/api/melhor-envio/status` também informa o Client ID e redirect_uri efetivos, sem expor Secrets. Logs persistentes estão habilitados, com invocation logs e traces desativados e query strings removidas. Após concluir a investigação, remover a instrumentação e desabilitar a observabilidade novamente.
+
+Não versione `.dev.vars`, `.env`, chaves, tokens ou arquivos de estado `.wrangler/`. Logs de requisições automáticos estão desativados no Wrangler para evitar guardar a query do callback. Além do diagnóstico temporário descrito acima, o código emite mensagens estáticas de falha na renovação. Para operação, confira a execução do Cron e `/api/melhor-envio/status`.
 
 Referências: [Workers](https://developers.cloudflare.com/workers/), [D1](https://developers.cloudflare.com/d1/), [OAuth Melhor Envio](https://docs.melhorenvio.com.br/reference/fluxo-de-autoriza%C3%A7%C3%A3o), [renovação](https://docs.melhorenvio.com.br/reference/solicitacao-do-token).

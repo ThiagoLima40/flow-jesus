@@ -13,7 +13,7 @@ const secrets = {
   MELHOR_ENVIO_REDIRECT_URI: `${origin}/api/melhor-envio/callback`,
   MELHOR_ENVIO_CLIENT_ID: 'test-client', MELHOR_ENVIO_CLIENT_SECRET: 'test-secret',
   MELHOR_ENVIO_ADMIN_PASSWORD: random(), MELHOR_ENVIO_TOKEN_KEY: b64(crypto.getRandomValues(new Uint8Array(32))),
-  MELHOR_ENVIO_USER_AGENT: 'FlowJesus (test@example.com)', MELHOR_ENVIO_SCOPES: 'shipping-calculate',
+  MELHOR_ENVIO_USER_AGENT: 'FlowJesus (test@example.com)', MELHOR_ENVIO_SCOPES: 'shipping-calculate', MELHOR_ENVIO_ORIGIN_POSTAL_CODE: '01001000',
 };
 const authorization = `Basic ${btoa(`admin:${secrets.MELHOR_ENVIO_ADMIN_PASSWORD}`)}`;
 const tokenBody = suffix => ({ access_token: `private-access-${suffix}`, refresh_token: `private-refresh-${suffix}`, token_type: 'Bearer', expires_in: 2592000 });
@@ -67,8 +67,11 @@ test('OAuth state is hashed, browser-bound, atomic and survives independent requ
   let exchanges = 0;
   const provider = async (url, options) => {
     exchanges++; assert.equal(url, `${cfg.baseUrl}/oauth/token`);
-    assert.equal(options.body.get('grant_type'), 'authorization_code');
-    assert.equal(options.body.get('client_secret'), secrets.MELHOR_ENVIO_CLIENT_SECRET);
+    assert.equal(new URLSearchParams(options.body).get('redirect_uri'), secrets.MELHOR_ENVIO_REDIRECT_URI);
+    assert.equal(new URLSearchParams(options.body).get('code'), 'test-code');
+    assert.equal(options.redirect, 'manual');
+    assert.equal(new URLSearchParams(options.body).get('grant_type'), 'authorization_code');
+    assert.equal(new URLSearchParams(options.body).get('client_secret'), secrets.MELHOR_ENVIO_CLIENT_SECRET);
     assert.equal(options.headers['User-Agent'], secrets.MELHOR_ENVIO_USER_AGENT);
     return Response.json(tokenBody('initial'));
   };
@@ -112,8 +115,8 @@ test('refresh rotates both tokens, persists them and skips fresh tokens', async 
   assert.equal(await refreshIfNeeded(store, cfg, () => assert.fail()), 'current');
   await due(); let calls = 0;
   const provider = async (_url, options) => {
-    calls++; assert.equal(options.body.get('grant_type'), 'refresh_token');
-    assert.equal(options.body.get('refresh_token'), 'private-refresh-initial');
+    calls++; assert.equal(new URLSearchParams(options.body).get('grant_type'), 'refresh_token');
+    assert.equal(new URLSearchParams(options.body).get('refresh_token'), 'private-refresh-initial');
     return Response.json(tokenBody('renewed'));
   };
   assert.equal(await refreshIfNeeded(store, cfg, provider), 'renewed');

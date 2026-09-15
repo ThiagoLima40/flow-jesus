@@ -123,7 +123,7 @@ export function CartDrawer() {
                     <span className="font-brush text-2xl text-brand-yellow">{formatBRL(subtotal)}</span>
                   </div>
                   <Button href="/carrinho" onClick={close} variant="pink" className="w-full justify-center">
-                    FINALIZAR COMPRA
+                    CALCULAR FRETE
                   </Button>
                   <button
                     onClick={close}

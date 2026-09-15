@@ -5,19 +5,25 @@
   "compatibility_date": "2026-08-01",
   "workers_dev": true,
   "preview_urls": false,
-  "observability": { "enabled": false },
+  "observability": {
+    "enabled": true,
+    "redact_query_string": true,
+    "logs": { "enabled": true, "invocation_logs": false, "head_sampling_rate": 1 },
+    "traces": { "enabled": false }
+  },
   "triggers": { "crons": ["17 4 * * *"] },
   "vars": {
-    "MELHOR_ENVIO_SETUP_MODE": "true",
-    "MELHOR_ENVIO_ENVIRONMENT": "sandbox",
-    "MELHOR_ENVIO_REDIRECT_URI": "https://flowjesus-melhor-envio.SEUSUBDOMINIO.workers.dev/api/melhor-envio/callback",
+    "MELHOR_ENVIO_SETUP_MODE": "false",
+    "MELHOR_ENVIO_ENVIRONMENT": "production",
+    "MELHOR_ENVIO_REDIRECT_URI": "https://flowjesus-melhor-envio.flowjesusoficial.workers.dev/api/melhor-envio/callback",
     "MELHOR_ENVIO_USER_AGENT": "FlowJesus (flowjesusoficial@gmail.com)",
-    "MELHOR_ENVIO_SCOPES": "shipping-calculate"
+    "MELHOR_ENVIO_SCOPES": "shipping-calculate",
+    "MELHOR_ENVIO_ORIGIN_POSTAL_CODE": "01001000"
   },
   "d1_databases": [{
     "binding": "DB",
     "database_name": "flowjesus-melhor-envio",
-    "database_id": "00000000-0000-0000-0000-000000000000",
+    "database_id": "225fe3ac-c8f0-44c7-8d0e-6f8cd21e7bca",
     "migrations_dir": "migrations"
   }]
 }

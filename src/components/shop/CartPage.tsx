@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatBRL, getProductImages } from "@/data/products";
@@ -15,16 +15,57 @@ export function CartPage() {
   const discount = appliedCoupon === "FLOW10" ? Math.round(subtotal * 10) / 100 : 0;
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [shippingOptions, setShippingOptions] = useState<Array<{ id: number; name: string; company: string | null; price: number; delivery_time: number }>>([]);
+  const [selectedShipping, setSelectedShipping] = useState<number | null>(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState("");
   const checkoutPending = useRef(false);
-  const shipping = subtotal > 250 || subtotal === 0 ? 0 : 24.9;
+  const quoteKey = JSON.stringify({ postalCode, items });
+  const currentQuoteKey = useRef(quoteKey);
+  currentQuoteKey.current = quoteKey;
+  const requestId = useRef(0);
+  const [quotedKey, setQuotedKey] = useState("");
+  useEffect(() => {
+    requestId.current += 1;
+    setShippingOptions([]);
+    setSelectedShipping(null);
+    setQuotedKey("");
+    setShippingError("");
+    setShippingLoading(false);
+  }, [quoteKey]);
+  const selectedOption = quotedKey === quoteKey ? shippingOptions.find((option) => option.id === selectedShipping) : undefined;
+  const shipping = selectedOption?.price ?? 0;
   const total = Math.max(0, subtotal - discount) + shipping;
 
   const applyCoupon = () => {
     setAppliedCoupon(coupon.trim().toUpperCase() === "FLOW10" ? "FLOW10" : "");
   };
 
+  const calculateShipping = async () => {
+    if (postalCode.length !== 8 || !items.length) return;
+    const id = ++requestId.current;
+    const key = quoteKey;
+    setShippingOptions([]); setSelectedShipping(null); setQuotedKey("");
+    setShippingLoading(true); setShippingError("");
+    try {
+      const response = await fetch("https://flowjesus-melhor-envio.flowjesusoficial.workers.dev/api/melhor-envio/quote", {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20000),
+        body: JSON.stringify({ toPostalCode: postalCode, products: items.map((item) => {
+          const product = getProduct(item.productId);
+          return { id: item.productId, width: 25, height: 8, length: 30, weight: 0.3, insuranceValue: product?.price ?? 0, quantity: item.qty };
+        }) }),
+      });
+      const result = await response.json();
+      if (!response.ok || !Array.isArray(result.services) || result.services.length === 0) throw new Error(result.error || "Nenhuma modalidade disponível para este CEP.");
+      if (id !== requestId.current || key !== currentQuoteKey.current) return;
+      setShippingOptions(result.services); setQuotedKey(key);
+    } catch (error) { if (id === requestId.current && key === currentQuoteKey.current) setShippingError(error instanceof Error ? error.message : "Não foi possível calcular o frete."); }
+    finally { if (id === requestId.current) setShippingLoading(false); }
+  };
+
   const startCheckout = async () => {
-    if (checkoutPending.current) return;
+    if (checkoutPending.current || shippingLoading || !selectedOption) return;
     checkoutPending.current = true;
     setSubmitting(true);
     setCheckoutError("");
@@ -34,7 +75,7 @@ export function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items,
-          shipping: { amountCents: Math.round(shipping * 100) },
+          shipping: { amountCents: Math.round(shipping * 100), serviceId: selectedOption.id, postalCode },
           coupon: appliedCoupon,
           discountCents: Math.round(discount * 100),
           totalCents: Math.round(total * 100),
@@ -46,6 +87,9 @@ export function CartPage() {
       }
       window.location.assign(result.checkout_url);
     } catch (error) {
+      setSelectedShipping(null);
+      setQuotedKey("");
+      setShippingOptions([]);
       setCheckoutError(error instanceof Error ? error.message : "Não foi possível iniciar o pagamento.");
       checkoutPending.current = false;
       setSubmitting(false);
@@ -148,6 +192,16 @@ export function CartPage() {
             </button>
           </div>
 
+          <div className="mt-4">
+            <label htmlFor="shipping-postal-code" className="mb-2 block text-xs font-display tracking-[0.14em] text-white/70">CEP DE ENTREGA</label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input id="shipping-postal-code" value={postalCode} onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="00000-000" inputMode="numeric" autoComplete="postal-code" className="h-11 min-w-0 flex-1 border border-white/20 bg-transparent px-3 text-sm outline-none focus:border-brand-cyan" aria-label="CEP de entrega" />
+              <button onClick={calculateShipping} disabled={shippingLoading || postalCode.length !== 8} className="h-11 w-full border border-brand-cyan px-3 text-xs font-display tracking-[0.08em] disabled:opacity-40 sm:w-auto">{shippingLoading ? "CALCULANDO..." : "CALCULAR FRETE"}</button>
+            </div>
+          </div>
+          {shippingError && <p role="alert" className="mt-2 text-xs text-brand-pink">{shippingError}</p>}
+          {quotedKey === quoteKey && shippingOptions.length > 0 && <fieldset className="mt-3 space-y-2"><legend className="sr-only">Modalidades disponíveis</legend>{shippingOptions.map((option) => <label key={option.id} className={`flex cursor-pointer items-center justify-between gap-3 border p-3 text-xs ${selectedShipping === option.id ? "border-brand-pink bg-brand-pink/5" : "border-white/10"}`}><span className="flex min-w-0 items-start"><input type="radio" name="shipping-option" checked={selectedShipping === option.id} onChange={() => setSelectedShipping(option.id)} className="mr-2 mt-0.5 shrink-0 accent-brand-pink" /><span className="leading-5">{option.name}{option.company ? ` · ${option.company}` : ""}<br /><span className="text-white/55">Prazo: {option.delivery_time} dias úteis</span></span></span><strong className="shrink-0 text-brand-yellow">{formatBRL(option.price)}</strong></label>)}</fieldset>}
+
           <dl className="mt-6 space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-white/60">Subtotal</dt>
@@ -155,24 +209,24 @@ export function CartPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-white/60">Frete</dt>
-              <dd>{shipping === 0 ? "Grátis" : formatBRL(shipping)}</dd>
+              <dd>{selectedOption ? (shipping === 0 ? "Grátis" : formatBRL(shipping)) : "A calcular"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-white/60">Desconto</dt>
               <dd className="text-brand-cyan">{discount > 0 ? `- ${formatBRL(discount)}` : "—"}</dd>
             </div>
             <div className="flex justify-between border-t border-white/10 pt-3">
-              <dt className="font-display tracking-[0.15em]">TOTAL</dt>
+              <dt className="font-display tracking-[0.15em]">{selectedOption ? "TOTAL" : "TOTAL SEM FRETE"}</dt>
               <dd className="font-brush text-2xl text-brand-yellow">{formatBRL(total)}</dd>
             </div>
           </dl>
 
-          <button type="button" onClick={startCheckout} disabled={submitting} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
+          <button type="button" onClick={startCheckout} disabled={submitting || shippingLoading || !selectedOption} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
             <span>{submitting ? "AGUARDE..." : "FINALIZAR COMPRA"}</span>
             <ArrowRight className="h-4 w-4" />
           </button>
           {checkoutError && <p role="alert" className="mt-3 text-sm text-brand-pink">{checkoutError}</p>}
-          <p className="mt-3 text-center text-xs text-white/40">Compra 100% segura · Frete grátis acima de R$ 250</p>
+          <p className="mt-3 text-center text-xs text-white/40">{selectedOption ? "Compra segura · Pagamento pelo Mercado Pago" : "Calcule o frete e selecione uma opção para finalizar."}</p>
         </aside>
       </div>
     </div>

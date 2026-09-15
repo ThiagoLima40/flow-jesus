@@ -2,6 +2,7 @@ import { config, setupMode, PREFIX } from './config.mjs';
 import { random, hash, equal } from './crypto.mjs';
 import { Store } from './store.mjs';
 import { authorizeCode, refreshIfNeeded, OAuthError } from './oauth.mjs';
+import { calculateQuote } from './shipping.mjs';
 const COOKIE = '__Host-flowjesus-me';
 const cookie = (value, maxAge) => `${COOKIE}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
 function reply(body, status = 200, headers = {}) {
@@ -11,7 +12,7 @@ function reply(body, status = 200, headers = {}) {
     'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'", ...headers,
   } });
 }
-const json = (value, status = 200) => reply(JSON.stringify(value), status, { 'Content-Type': 'application/json' });
+const json = (value, status = 200, headers = {}) => reply(JSON.stringify(value), status, { 'Content-Type': 'application/json', ...headers });
 async function admin(request, cfg) {
   const expected = `Basic ${btoa(`admin:${cfg.adminPassword}`)}`;
   return equal(request.headers.get('Authorization') || '', expected);
@@ -28,14 +29,23 @@ export async function handle(request, env, fetchImpl = fetch) {
       await env.DB.prepare('SELECT 1').first();
       return json({ status: 'ok' });
     }
-    const paths = [`${PREFIX}/authorize`, `${PREFIX}/callback`, `${PREFIX}/status`, `${PREFIX}/refresh`];
+    const paths = [`${PREFIX}/authorize`, `${PREFIX}/callback`, `${PREFIX}/status`, `${PREFIX}/refresh`, `${PREFIX}/quote`];
     if (!paths.includes(url.pathname)) return reply('Não encontrado.', 404);
-    const method = url.pathname === `${PREFIX}/refresh` ? 'POST' : 'GET';
+    if (request.method === 'OPTIONS' && url.pathname === `${PREFIX}/quote`) return reply('', 204, {
+      'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type',
+    });
+    const method = [ `${PREFIX}/refresh`, `${PREFIX}/quote` ].includes(url.pathname) ? 'POST' : 'GET';
     if (request.method !== method) return reply('Método não permitido.', 405, { Allow: method });
     if (setupMode(env)) return reply('Integração aguardando configuração administrativa.', 503);
     const cfg = await config(env);
     if (url.origin !== cfg.origin) return reply('Utilize o endereço configurado para esta integração.', 400);
     const store = new Store(env.DB);
+    if (url.pathname === `${PREFIX}/quote`) {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: 'JSON inválido.' }, 400, { 'Access-Control-Allow-Origin': '*' }); }
+      try { return json({ services: await calculateQuote(store, cfg, body, fetchImpl) }, 200, { 'Access-Control-Allow-Origin': '*' }); }
+      catch (error) { return json({ error: error instanceof OAuthError ? error.message : 'Não foi possível calcular o frete.' }, error instanceof OAuthError ? error.status : 502, { 'Access-Control-Allow-Origin': '*' }); }
+    }
     if (!isCallback && !await admin(request, cfg)) return reply('Autenticação administrativa necessária.', 401, { 'WWW-Authenticate': 'Basic realm="FlowJesus Melhor Envio"' });
     if (url.pathname === `${PREFIX}/authorize`) {
       const now = Date.now();
@@ -61,7 +71,8 @@ export async function handle(request, env, fetchImpl = fetch) {
     }
     if (url.pathname === `${PREFIX}/status`) {
       const row = await store.read(cfg.connectionId);
-      return json({ status: row?.status || 'unconnected', expires_at: row?.expires_at || null, refresh_expires_at: row?.refresh_expires_at || null, renewal_in_progress: Boolean(row?.lock_owner) });
+      return json({ status: row?.status || 'unconnected', expires_at: row?.expires_at || null, refresh_expires_at: row?.refresh_expires_at || null, renewal_in_progress: Boolean(row?.lock_owner),
+        client_id: cfg.clientId, redirect_uri: cfg.redirectUri });
     }
     // Custom header plus origin validation prevents browser CSRF with cached Basic auth.
     if (request.headers.get('X-FlowJesus-Admin') !== '1' || (request.headers.has('Origin') && request.headers.get('Origin') !== cfg.origin)) return reply('Requisição administrativa inválida.', 403);

@@ -23,6 +23,7 @@ export async function config(env) {
     redirectUri, origin: callback.origin, userAgent: required('MELHOR_ENVIO_USER_AGENT'),
     scope: env.MELHOR_ENVIO_SCOPES || 'shipping-calculate',
     baseUrl: environment === 'sandbox' ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br',
+    originPostalCode: required('MELHOR_ENVIO_ORIGIN_POSTAL_CODE').replace(/\D/g, ''),
     connectionId: await hash(`${environment}:${clientId}`),
   };
 }
