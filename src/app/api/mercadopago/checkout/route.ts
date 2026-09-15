@@ -13,6 +13,21 @@ function redactCredentials(value: string, credentials: string[]) {
 type CheckoutItem = { productId: string; size: string; color: string; qty: number };
 
 export async function POST(request: NextRequest) {
+  // O secret permanece no Worker; a Vercel encaminha somente o pedido.
+  if (process.env.VERCEL === "1") {
+    try {
+      const response = await fetch("https://flow-jesus.flowjesusoficial.workers.dev/api/mercadopago/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: await request.text(),
+        cache: "no-store",
+        signal: AbortSignal.timeout(25000),
+      });
+      return NextResponse.json(await response.json(), { status: response.status });
+    } catch {
+      return NextResponse.json({ error: "Não foi possível iniciar o pagamento. Tente novamente." }, { status: 502 });
+    }
+  }
   let token: string | undefined;
   try {
     token = (getCloudflareContext().env as { MERCADOPAGO_ACCESS_TOKEN?: string }).MERCADOPAGO_ACCESS_TOKEN;
@@ -39,13 +54,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { items, shipping } = body as { items?: unknown; shipping?: unknown };
-  if (!Array.isArray(items) || items.length === 0 || items.length > 50 || !["normal", "expressa"].includes(shipping as string)) {
+  const { items, shipping, coupon, discountCents, totalCents } = body as {
+    items?: unknown; shipping?: unknown; coupon?: unknown; discountCents?: unknown; totalCents?: unknown;
+  };
+  const cartCheckout = shipping !== null && typeof shipping === "object";
+  if (!Array.isArray(items) || items.length === 0 || items.length > 50 ||
+      (!cartCheckout && !["normal", "expressa"].includes(shipping as string))) {
     return NextResponse.json({ error: "Itens ou entrega inválidos." }, { status: 400 });
   }
 
   let subtotalCents = 0;
-  const orderItems = [];
+  let orderItems = [];
   for (const raw of items) {
     const item = raw as Partial<CheckoutItem> | null;
     if (!item || typeof item.productId !== "string" || typeof item.size !== "string" ||
@@ -64,13 +83,40 @@ export async function POST(request: NextRequest) {
     orderItems.push({
       id: product.id,
       title: `${product.name} - ${item.size} - ${item.color}`,
-      quantity: item.qty,
+      quantity: item.qty as number,
       currency_id: "BRL",
       unit_price: unitCents / 100,
     });
   }
 
-  const shippingCents = shipping === "expressa" ? 3490 : subtotalCents > 25000 ? 0 : 1990;
+  // Mantém compatibilidade com /checkout; /carrinho fornece o frete exibido.
+  let shippingCents = shipping === "expressa" ? 3490 : subtotalCents > 25000 ? 0 : 1990;
+  if (cartCheckout) {
+    const amountCents = (shipping as { amountCents?: unknown }).amountCents;
+    const expectedDiscount = coupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0;
+    if (!Number.isSafeInteger(amountCents) || (amountCents as number) < 0 ||
+        !["", "FLOW10"].includes(coupon as string) || discountCents !== expectedDiscount ||
+        !Number.isSafeInteger(totalCents) || totalCents !== subtotalCents - expectedDiscount + (amountCents as number)) {
+      return NextResponse.json({ error: "Total, frete ou desconto inválido. Atualize o carrinho." }, { status: 400 });
+    }
+    shippingCents = amountCents as number;
+    // Rateia o desconto em centavos, preservando os produtos e as quantidades.
+    // Divide uma linha somente quando o arredondamento exige preços diferentes.
+    let accumulatedCents = 0;
+    let allocatedCents = 0;
+    orderItems = orderItems.flatMap((item) => {
+      accumulatedCents += Math.round(item.unit_price * 100) * item.quantity;
+      const targetCents = Math.round(accumulatedCents * (subtotalCents - expectedDiscount) / subtotalCents);
+      const lineCents = targetCents - allocatedCents;
+      allocatedCents = targetCents;
+      const unitCents = Math.floor(lineCents / item.quantity);
+      const remainder = lineCents % item.quantity;
+      return [
+        { ...item, quantity: item.quantity - remainder, unit_price: unitCents / 100 },
+        { ...item, quantity: remainder, unit_price: (unitCents + 1) / 100 },
+      ].filter((line) => line.quantity > 0);
+    });
+  }
   if (shippingCents) {
     orderItems.push({
       id: "shipping",

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatBRL, getProductImages } from "@/data/products";
 import { StreetImage } from "@/components/ui/StreetImage";
@@ -11,13 +11,45 @@ import { Cross } from "@/components/ui/Graphics";
 export function CartPage() {
   const { items, getProduct, updateQuantity, removeItem, subtotal, count, clearCart } = useCart();
   const [coupon, setCoupon] = useState("");
-  const [discount, setDiscount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState("");
+  const discount = appliedCoupon === "FLOW10" ? Math.round(subtotal * 10) / 100 : 0;
+  const [submitting, setSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const checkoutPending = useRef(false);
   const shipping = subtotal > 250 || subtotal === 0 ? 0 : 24.9;
   const total = Math.max(0, subtotal - discount) + shipping;
 
   const applyCoupon = () => {
-    if (coupon.trim().toUpperCase() === "FLOW10") setDiscount(subtotal * 0.1);
-    else setDiscount(0);
+    setAppliedCoupon(coupon.trim().toUpperCase() === "FLOW10" ? "FLOW10" : "");
+  };
+
+  const startCheckout = async () => {
+    if (checkoutPending.current) return;
+    checkoutPending.current = true;
+    setSubmitting(true);
+    setCheckoutError("");
+    try {
+      const response = await fetch("/api/mercadopago/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items,
+          shipping: { amountCents: Math.round(shipping * 100) },
+          coupon: appliedCoupon,
+          discountCents: Math.round(discount * 100),
+          totalCents: Math.round(total * 100),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || typeof result.checkout_url !== "string") {
+        throw new Error(result.error || "Não foi possível iniciar o pagamento.");
+      }
+      window.location.assign(result.checkout_url);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Não foi possível iniciar o pagamento.");
+      checkoutPending.current = false;
+      setSubmitting(false);
+    }
   };
 
   if (items.length === 0) {
@@ -135,9 +167,11 @@ export function CartPage() {
             </div>
           </dl>
 
-          <Button href="/checkout" variant="pink" className="mt-6 w-full justify-center">
-            FINALIZAR COMPRA
-          </Button>
+          <button type="button" onClick={startCheckout} disabled={submitting} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
+            <span>{submitting ? "AGUARDE..." : "FINALIZAR COMPRA"}</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          {checkoutError && <p role="alert" className="mt-3 text-sm text-brand-pink">{checkoutError}</p>}
           <p className="mt-3 text-center text-xs text-white/40">Compra 100% segura · Frete grátis acima de R$ 250</p>
         </aside>
       </div>
