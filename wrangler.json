@@ -3,7 +3,7 @@
   "main": ".open-next/worker.js",
   "name": "flow-jesus",
   "compatibility_date": "2026-09-08",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "disable_nodejs_process_v2", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
