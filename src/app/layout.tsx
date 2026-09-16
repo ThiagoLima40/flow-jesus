@@ -4,7 +4,6 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MiniPlayer } from "@/components/music/MiniPlayer";
 import { CartDrawer } from "@/components/shop/CartDrawer";
 import { site } from "@/data/site";
 
@@ -60,7 +59,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <Footer />
-          <MiniPlayer />
           <CartDrawer />
         </Providers>
       </body>

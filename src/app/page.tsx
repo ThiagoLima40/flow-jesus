@@ -5,8 +5,8 @@ import { FeaturedCollection } from "@/components/home/FeaturedCollection";
 import { StoryPreview } from "@/components/home/StoryPreview";
 import { BjjPreview } from "@/components/home/BjjPreview";
 import { Movement } from "@/components/home/Movement";
-import { FlowPlayPreview } from "@/components/home/FlowPlayPreview";
 import { FinalCta } from "@/components/home/FinalCta";
+import { FlowPlaySpotify } from "@/components/home/FlowPlaySpotify";
 
 // Reativar somente após substituir os depoimentos provisórios por relatos reais.
 const showMovementTestimonials = false;
@@ -21,8 +21,8 @@ export default function HomePage() {
       <StoryPreview />
       <BjjPreview />
       {showMovementTestimonials && <Movement />}
-      <FlowPlayPreview />
       <FinalCta />
+      <FlowPlaySpotify />
     </>
   );
 }
