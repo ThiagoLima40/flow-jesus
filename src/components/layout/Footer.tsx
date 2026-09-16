@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { Instagram, Youtube, Music2, ArrowRight } from "lucide-react";
 import { footerLinks } from "@/data/navigation";
-import { site } from "@/data/site";
 import { LogoWordmark } from "@/components/ui/LogoWordmark";
 import { SmileyCross, Splatter } from "@/components/ui/Graphics";
 
@@ -72,13 +71,13 @@ export function Footer() {
           <div>
             <h3 className="mb-4 font-display text-sm tracking-[0.2em] text-brand-yellow">SIGA O FLOW</h3>
             <div className="flex gap-3">
-              <a href={site.social.instagram} aria-label="Instagram" className="rounded-full border border-white/15 p-2 transition-colors hover:border-brand-pink hover:text-brand-pink">
+              <a href="https://www.instagram.com/isaquelimajj/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="rounded-full border border-white/15 p-2 transition-colors hover:border-brand-pink hover:text-brand-pink">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href={site.social.youtube} aria-label="YouTube" className="rounded-full border border-white/15 p-2 transition-colors hover:border-brand-pink hover:text-brand-pink">
+              <a href="https://youtube.com/@isaque1317" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="rounded-full border border-white/15 p-2 transition-colors hover:border-brand-pink hover:text-brand-pink">
                 <Youtube className="h-5 w-5" />
               </a>
-              <a href={site.social.spotify} aria-label="Spotify" className="rounded-full border border-white/15 p-2 transition-colors hover:border-brand-pink hover:text-brand-pink">
+              <a href="https://www.tiktok.com/@isaque.limajj" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="rounded-full border border-white/15 p-2 transition-colors hover:border-brand-pink hover:text-brand-pink">
                 <Music2 className="h-5 w-5" />
               </a>
             </div>
