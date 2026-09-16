@@ -8,6 +8,9 @@ import { Movement } from "@/components/home/Movement";
 import { FlowPlayPreview } from "@/components/home/FlowPlayPreview";
 import { FinalCta } from "@/components/home/FinalCta";
 
+// Reativar somente após substituir os depoimentos provisórios por relatos reais.
+const showMovementTestimonials = false;
+
 export default function HomePage() {
   return (
     <>
@@ -17,7 +20,7 @@ export default function HomePage() {
       <FeaturedCollection />
       <StoryPreview />
       <BjjPreview />
-      <Movement />
+      {showMovementTestimonials && <Movement />}
       <FlowPlayPreview />
       <FinalCta />
     </>

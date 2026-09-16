@@ -16,6 +16,10 @@ function StatIcon({ icon }: { icon: string }) {
 }
 
 export function BjjPreview() {
+  const clipImages: Record<string, { src: string; alt: string }> = {
+    v2: { src: "/images/home/disciplina-diaria-kimono.jpg", alt: "Disciplina Diária — Isaque de kimono em contexto de treino" },
+    v3: { src: "/images/home/vitoria-cinturao-medalhas.jpg", alt: "Vitória com Propósito — Isaque com cinturão e medalhas diante da bandeira brasileira" },
+  };
   const clips = videos.slice(0, 3);
   return (
     <section className="relative overflow-hidden bg-street py-20">
@@ -54,24 +58,32 @@ export function BjjPreview() {
 
           <Reveal dir="right" className="grid grid-cols-2 gap-3">
             <StreetImage
-              src=""
-              alt="Isaque treinando jiu-jítsu"
+              src="/images/home/isaque-kimono-medalhas.jpg"
+              fit="contain"
+              alt="Isaque de kimono branco exibindo medalhas em campeonato de jiu-jítsu"
               kind="video"
               accent="pink"
               label="TREINO"
-              className="col-span-2 aspect-video w-full"
+              className="aspect-square w-full"
             />
             {clips.slice(1).map((v) => (
               <StreetImage
                 key={v.id}
-                src=""
-                alt={v.title}
+                src={clipImages[v.id]?.src}
+                fit="contain"
+                alt={clipImages[v.id]?.alt ?? v.title}
                 kind="video"
                 accent={v.accent}
                 label={v.title}
-                className="aspect-video w-full"
+                className="aspect-square w-full"
               />
             ))}
+            <StreetImage
+              src="/images/home/isaque-treino-rashguard.jpg"
+              fit="contain"
+              alt="Isaque de rashguard durante o treino, com o rosto em destaque"
+              className="aspect-square w-full"
+            />
           </Reveal>
         </div>
       </div>

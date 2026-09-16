@@ -95,25 +95,27 @@ export function Hero() {
           <div className="absolute right-6 top-6 h-72 w-72 rotate-12 rounded-full bg-brand-cyan/20 blur-2xl md:h-96 md:w-96" />
           <div className="absolute bottom-10 left-2 h-56 w-56 -rotate-12 rounded-full bg-brand-pink/20 blur-2xl" />
 
-          {/* camiseta branca atrás */}
+          {/* arte institucional atrás */}
           <div className="absolute right-2 top-2 w-[58%] rotate-3">
             <StreetImage
-              src=""
-              alt="Camiseta FLOW JESUS branca — coleção"
+              src="/images/home/flowjesus-arte-institucional.jpg"
+              fit="contain"
+              alt="Arte institucional FlowJesus — fé e propósito"
               kind="product"
               accent="cyan"
-              label="REINO"
+              label="FLOW JESUS"
               className="aspect-[4/5] w-full shadow-card"
             />
           </div>
-          {/* camiseta preta na frente */}
+          {/* campanha da coleção na frente */}
           <div className="absolute bottom-0 left-0 w-[62%] -rotate-3">
             <StreetImage
-              src=""
-              alt="Camiseta FLOW JESUS preta — destaque"
+              src="/images/home/flowjesus-campanha-maranatha.jpg"
+              fit="contain"
+              alt="Campanha FlowJesus — camiseta Maranatha, frente, costas e detalhes"
               kind="product"
               accent="pink"
-              label="NADA ALÉM DA GRAÇA"
+              label="MARANATHA"
               className="aspect-[4/5] w-full shadow-card"
               priority
             />

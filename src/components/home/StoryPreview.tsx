@@ -13,7 +13,8 @@ export function StoryPreview() {
         <Reveal dir="left" className="relative">
           <div className="absolute -left-4 -top-4 h-40 w-40 rounded-full bg-brand-cyan/20 blur-2xl" />
           <StreetImage
-            src=""
+            src="/images/home/isaque-kimono.jpg"
+            fit="contain"
             alt="Isaque Lima com kimono de jiu-jítsu"
             kind="cover"
             accent="yellow"
