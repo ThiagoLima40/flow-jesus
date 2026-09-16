@@ -8,7 +8,7 @@
     "dev": "next dev",
     "prebuild": "node scripts/generate-product-images.mjs",
     "build": "next build",
-    "build:worker": "opennextjs-cloudflare",
+    "build:worker": "node scripts/build-worker.mjs",
     "deploy": "npm run build:worker && wrangler deploy",
     "start": "next start",
     "lint": "next lint",

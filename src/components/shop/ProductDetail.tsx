@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Shield, Truck, RefreshCw, Ruler, Minus, Plus } from "lucide-react";
 import { type Product, formatBRL, getProductImages } from "@/data/products";
+import { productPixPrice } from "@/lib/pricing";
 import { useCart } from "@/context/CartContext";
 import { StreetImage } from "@/components/ui/StreetImage";
 import { Badge } from "@/components/ui/Badge";
@@ -78,8 +79,8 @@ export function ProductDetail({ product }: { product: Product }) {
             <p className="mt-5 text-white/70">{product.description}</p>
 
             <div className="mt-6">
-              <p className="font-display text-3xl text-brand-yellow">{formatBRL(product.price)}</p>
-              <p className="text-sm text-white/50">ou 3x de {installment} sem juros</p>
+              <p className="font-display text-3xl text-brand-yellow">{formatBRL(productPixPrice(product.price))} no Pix — 5% OFF</p>
+              <p className="text-sm text-white/50">ou {formatBRL(product.price)} em até 3x de {installment} sem juros</p>
             </div>
 
             {/* cor */}

@@ -23,16 +23,20 @@ export function quoteInput(body, originPostalCode) {
 
 export async function calculateQuote(store, cfg, body, fetchImpl = fetch) {
   const payload = quoteInput(body, cfg.originPostalCode);
-  const token = await getAccessToken(store, cfg, fetchImpl);
-  const response = await fetchImpl(`${cfg.baseUrl}${QUOTE_PATH}`, {
-    method: 'POST', headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'User-Agent': cfg.userAgent },
-    body: JSON.stringify(payload), signal: AbortSignal.timeout(15000), redirect: 'follow',
-  });
+  let response;
+  try {
+    const token = await getAccessToken(store, cfg, fetchImpl);
+    response = await fetchImpl(`${cfg.baseUrl}${QUOTE_PATH}`, {
+      method: 'POST', headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'User-Agent': cfg.userAgent },
+      body: JSON.stringify(payload), signal: AbortSignal.timeout(15000), redirect: 'follow',
+    });
+  } catch {
+    throw new OAuthError(502, 'Não foi possível calcular o frete. Tente novamente.');
+  }
   let value;
   try { value = await response.json(); } catch { throw new OAuthError(502, 'O Melhor Envio retornou uma resposta inválida.'); }
   if (!response.ok || !Array.isArray(value)) {
-    const message = value && typeof value.message === 'string' ? value.message : 'Não foi possível calcular o frete.';
-    throw new OAuthError(response.status === 401 || response.status === 403 ? 502 : 422, message.slice(0, 200));
+    throw new OAuthError(response.status === 401 || response.status === 403 ? 502 : 422, 'Não foi possível calcular o frete. Tente novamente.');
   }
   return value.filter(item => item && typeof item === 'object' && !item.error && (item.custom_price ?? item.price) != null && (item.custom_delivery_time ?? item.delivery_time) != null).map(item => ({
     id: item.id, name: item.name, company: item.company?.name || null,

@@ -42,7 +42,7 @@ npm run check
 
 Os testes usam o runtime local Miniflare e D1 real emulado, com respostas simuladas do Melhor Envio. Não acessam conta real, banco remoto ou produtos. O dry-run verifica o empacotamento sem publicar. Para servir localmente: `npm run db:local` e `npm run dev`; o modo inicial permite testar `/health`. OAuth ativo requer a origem HTTPS exata cadastrada; o tutorial de publicação resolve essa etapa com workers.dev.
 
-Diagnóstico temporário OAuth: o evento `melhor_envio_oauth_diagnostic` registra somente status HTTP e mensagem sanitizada, sem um segundo evento genérico. Falhas de transporte têm status nulo e mensagem estática. Campos JSON de erro são sanitizados; respostas não JSON e corpos de sucesso são omitidos. A rota administrativa `/api/melhor-envio/status` também informa o Client ID e redirect_uri efetivos, sem expor Secrets. Logs persistentes estão habilitados, com invocation logs e traces desativados e query strings removidas. Após concluir a investigação, remover a instrumentação e desabilitar a observabilidade novamente.
+Os diagnósticos OAuth registram somente o evento local, a etapa e o status HTTP numérico. Corpos, headers e mensagens do provedor ou de exceções não são registrados nem devolvidos ao navegador.
 
 Não versione `.dev.vars`, `.env`, chaves, tokens ou arquivos de estado `.wrangler/`. Logs de requisições automáticos estão desativados no Wrangler para evitar guardar a query do callback. Além do diagnóstico temporário descrito acima, o código emite mensagens estáticas de falha na renovação. Para operação, confira a execução do Cron e `/api/melhor-envio/status`.
 

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { pixDiscountCents } from "@/lib/pricing";
+import { createPixPayment } from "@/lib/pix-payment";
 import { products } from "@/data/products";
 
 export const runtime = "nodejs";
 
 const mercadoPagoCheckoutEndpoint = "https://api.mercadopago.com/checkout/preferences";
-
-function redactCredentials(value: string, credentials: string[]) {
-  return credentials.reduce((text, credential) => text.replaceAll(credential, "[REDACTED]"), value);
-}
 
 type CheckoutItem = { productId: string; size: string; color: string; qty: number };
 
@@ -54,9 +52,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { items, shipping, coupon, discountCents, totalCents } = body as {
+  const { items, shipping, coupon, discountCents, totalCents, paymentMethod, payerEmail, pixRequestId } = body as {
     items?: unknown; shipping?: unknown; coupon?: unknown; discountCents?: unknown; totalCents?: unknown;
+    paymentMethod?: unknown; payerEmail?: unknown; pixRequestId?: unknown;
   };
+  const isPix = paymentMethod === "pix";
+  if (paymentMethod !== undefined && paymentMethod !== "other" && !isPix) {
+    return NextResponse.json({ error: "Forma de pagamento inválida." }, { status: 400 });
+  }
+  if (isPix && (typeof payerEmail !== "string" || payerEmail.trim().length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail.trim()) || typeof pixRequestId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pixRequestId))) {
+    return NextResponse.json({ error: "Informe um e-mail válido para gerar o Pix e tente novamente." }, { status: 400 });
+  }
   const cartCheckout = shipping !== null && typeof shipping === "object";
   if (!Array.isArray(items) || items.length === 0 || items.length > 50 ||
       !cartCheckout) {
@@ -95,7 +103,7 @@ export async function POST(request: NextRequest) {
     if (!Number.isSafeInteger(serviceId) || typeof postalCode !== "string" || !/^\d{8}$/.test(postalCode)) {
       return NextResponse.json({ error: "Calcule o frete e selecione uma modalidade." }, { status: 400 });
     }
-    const expectedDiscount = coupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0;
+    const expectedDiscount = (coupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0) + (isPix ? pixDiscountCents(subtotalCents) : 0);
     if (!Number.isSafeInteger(amountCents) || (amountCents as number) < 0 ||
         !["", "FLOW10"].includes(coupon as string) || discountCents !== expectedDiscount ||
         !Number.isSafeInteger(totalCents) || totalCents !== subtotalCents - expectedDiscount + (amountCents as number)) {
@@ -148,6 +156,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (isPix) {
+      // Use the server-priced products and the verified, undiscounted freight.
+      const couponDiscount = coupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0;
+      const checkoutUrl = await createPixPayment(token, {
+        amountCents: subtotalCents - couponDiscount - pixDiscountCents(subtotalCents) + shippingCents,
+        email: (payerEmail as string).trim(),
+        requestId: pixRequestId as string,
+        order: { items, shipping, coupon },
+      });
+      return NextResponse.json({ checkout_url: checkoutUrl });
+    }
     const response = await fetch(mercadoPagoCheckoutEndpoint, {
       method: "POST",
       headers: {
@@ -162,45 +181,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      let errorBody: unknown = null;
-      const errorResponse = response.clone();
-      try {
-        errorBody = await response.json();
-      } catch {
-        // A resposta de erro pode não conter JSON.
-      }
-
-      const credentials = [token, process.env.MERCADOPAGO_CLIENT_SECRET].filter(
-        (value): value is string => Boolean(value),
-      );
-      const emptyJson = errorBody == null || errorBody === "" ||
-        (typeof errorBody === "object" && Object.keys(errorBody).length === 0);
-      let rawErrorBody: string | undefined;
-      if (emptyJson) {
-        const rawText = redactCredentials(await errorResponse.text(), credentials);
-        rawErrorBody = /bearer\s+\S+|authorization|access[_ -]?token|client[_ -]?secret|password|api[_ -]?key|[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(rawText)
-          ? "[REDACTED]"
-          : rawText;
-      }
-      const safeErrorBody = JSON.stringify(errorBody, (key, value: unknown) => {
-        if (/(authorization|access[_-]?token|client[_-]?secret|password|api[_-]?key)/i.test(key)) {
-          return "[REDACTED]";
-        }
-        if (typeof value === "string") {
-          return redactCredentials(value, credentials);
-        }
-        return value;
-      });
-      const requestId = response.headers.get("x-request-id");
-      const correlationId = response.headers.get("x-correlation-id");
+      // Provider bodies, headers and exception messages may contain credentials.
       console.error("Mercado Pago checkout request failed", {
         endpoint: mercadoPagoCheckoutEndpoint,
         status: response.status,
-        statusText: redactCredentials(response.statusText, credentials),
-        requestId: requestId && redactCredentials(requestId, credentials),
-        ...(correlationId && { correlationId: redactCredentials(correlationId, credentials) }),
-        errorBody: safeErrorBody,
-        ...(rawErrorBody !== undefined && { rawErrorBody }),
       });
       return NextResponse.json({ error: "Não foi possível iniciar o pagamento. Tente novamente." }, { status: 502 });
     }
@@ -212,14 +196,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ checkout_url: checkoutUrl });
-  } catch (error) {
-    const credentials = [token, process.env.MERCADOPAGO_CLIENT_SECRET].filter(
-      (value): value is string => Boolean(value),
-    );
+  } catch {
     console.error("Mercado Pago checkout request exception", {
-      endpoint: mercadoPagoCheckoutEndpoint,
-      message: error instanceof Error ? redactCredentials(error.message, credentials) : "Unknown exception",
+      endpoint: isPix ? "https://api.mercadopago.com/v1/payments" : mercadoPagoCheckoutEndpoint,
     });
-    return NextResponse.json({ error: "Não foi possível iniciar o pagamento. Tente novamente." }, { status: 502 });
+    return NextResponse.json({ error: isPix ? "Não foi possível gerar o Pix. Tente novamente." : "Não foi possível iniciar o pagamento. Tente novamente." }, { status: 502 });
   }
 }

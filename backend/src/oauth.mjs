@@ -1,5 +1,5 @@
 import { decrypt, encrypt, random } from './crypto.mjs';
-import { safeErrorBody, logOAuthFailure, TokenExchangeError } from './oauth-diagnostics.mjs';
+import { logOAuthFailure, TokenExchangeError } from './oauth-diagnostics.mjs';
 const DAY = 86400000;
 export class OAuthError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -25,8 +25,7 @@ async function exchange(cfg, grant, fetchImpl) {
     throw new TokenExchangeError(response.status, 'Resposta não JSON ou ilegível; conteúdo omitido por segurança.');
   }
   if (!response.ok) {
-    const safe = safeErrorBody(value, [cfg.clientSecret, grant.code, grant.refresh_token]);
-    throw new TokenExchangeError(response.status, typeof safe === 'string' ? safe : Object.entries(safe).map(([key, value]) => `${key}: ${value}`).join('; '));
+    throw new TokenExchangeError(response.status, 'O provedor recusou a autorização; detalhes omitidos por segurança.');
   }
   if (!value || typeof value.access_token !== 'string' || !value.access_token || typeof value.refresh_token !== 'string' || !value.refresh_token ||
       typeof value.token_type !== 'string' || value.token_type.toLowerCase() !== 'bearer' || !Number.isFinite(value.expires_in) || value.expires_in <= 0 || value.expires_in > 365 * 86400) {
@@ -49,9 +48,9 @@ export async function authorizeCode(store, cfg, code, fetchImpl = fetch, now = D
     await persist(store, cfg, owner, tokens, now);
   } catch (error) {
     const diagnostic = error instanceof TokenExchangeError ? error.diagnostic : { http_status: null, message: stage === 'token_persistence' ? 'Falha ao criptografar ou persistir tokens.' : 'Falha interna na troca OAuth.' };
-    logOAuthFailure(stage, diagnostic.http_status, diagnostic.message);
+    logOAuthFailure(stage, diagnostic.http_status);
     await store.release(cfg.connectionId, owner, attempted);
-    throw new OAuthError(502, `Não foi possível concluir a autorização. Inicie novamente.\nHTTP Melhor Envio: ${diagnostic.http_status ?? 'sem resposta'}.\n${diagnostic.message}`);
+    throw new OAuthError(502, 'Não foi possível concluir a autorização. Inicie novamente.');
   }
 }
 export async function refreshIfNeeded(store, cfg, fetchImpl = fetch, now = Date.now()) {
@@ -76,7 +75,7 @@ export async function refreshIfNeeded(store, cfg, fetchImpl = fetch, now = Date.
     await persist(store, cfg, owner, renewed, now);
     return 'renewed';
   } catch (error) {
-    if (error instanceof TokenExchangeError) logOAuthFailure('token_refresh', error.diagnostic.http_status, error.diagnostic.message);
+    if (error instanceof TokenExchangeError) logOAuthFailure('token_refresh', error.diagnostic.http_status);
     await store.release(cfg.connectionId, owner, attempted);
     // Network/commit ambiguity: preserve ciphertext but block automatic reuse.
     throw new OAuthError(502, attempted ? 'Renovação não confirmada. Autorize novamente.' : 'Não foi possível ler os tokens. Verifique a configuração.');

@@ -6,7 +6,21 @@
 .DS_Store
 *.pem
 npm-debug.log*
-.env*.local
+# Local credentials (keep only empty/documented examples).
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+*.key
+*.p12
+*.pfx
+*.log
+.npmrc
+.secrets/
+secrets.local.*
 .vercel
 *.tsbuildinfo
 next-env.d.ts

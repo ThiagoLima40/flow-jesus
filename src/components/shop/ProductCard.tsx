@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { type Product, formatBRL, getProductImages } from "@/data/products";
+import { productPixPrice } from "@/lib/pricing";
 import { useCart } from "@/context/CartContext";
 import { StreetImage } from "@/components/ui/StreetImage";
 import { Badge } from "@/components/ui/Badge";
@@ -28,8 +29,8 @@ export function ProductCard({ product }: { product: Product; index?: number }) {
       <div className="flex flex-1 flex-col gap-3 p-4">
         <Link href={href} className="font-display text-base tracking-wide hover:text-brand-yellow">{product.name}</Link>
         <div>
-          <p className="font-display text-xl text-brand-yellow">{formatBRL(product.price)}</p>
-          <p className="text-xs text-white/50">3x de {formatBRL(product.price / 3)}</p>
+          <p className="font-display text-xl text-brand-yellow">{formatBRL(productPixPrice(product.price))} no Pix — 5% OFF</p>
+          <p className="text-xs text-white/50">ou {formatBRL(product.price)} em até 3x de {formatBRL(product.price / 3)} sem juros</p>
         </div>
         <ul className="flex flex-wrap gap-3" aria-label="Cores disponíveis">
           {product.colors.map((color) => <li key={color.name} className="flex items-center gap-1.5 text-xs text-white/70"><span className="h-3.5 w-3.5 rounded-full border border-white/30" style={{ background: color.hex }} />{color.name}</li>)}

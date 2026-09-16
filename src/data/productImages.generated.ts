@@ -37,6 +37,10 @@ export const productImagesBySlug: Record<string, string[]> = {
     "/images/products/deus-esta-no-controle/01-montagem-preta.jpg",
     "/images/products/deus-esta-no-controle/02-montagem-branca.jpg"
   ],
+  "ele-nos-amou-primeiro": [
+    "/images/products/ele-nos-amou-primeiro/01-montagem-preta.jpg",
+    "/images/products/ele-nos-amou-primeiro/02-montagem-branca.jpg"
+  ],
   "esse-nome-tem-poder": [
     "/images/products/esse-nome-tem-poder/01-verso-branca.jpg",
     "/images/products/esse-nome-tem-poder/02-frente-branca.jpg",
@@ -83,6 +87,10 @@ export const productImagesBySlug: Record<string, string[]> = {
   "tudo-e-possivel": [
     "/images/products/tudo-e-possivel/01-verso-branca.jpg",
     "/images/products/tudo-e-possivel/02-frente-branca.jpg"
+  ],
+  "tudo-posso-naquele-que-me-fortalece": [
+    "/images/products/tudo-posso-naquele-que-me-fortalece/01-montagem-preta.jpg",
+    "/images/products/tudo-posso-naquele-que-me-fortalece/02-montagem-branca.jpg"
   ],
   "walk-by-faith": [
     "/images/products/walk-by-faith/01-verso-preta.jpg",

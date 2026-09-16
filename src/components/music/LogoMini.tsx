@@ -1,7 +1,7 @@
 import { CSSProperties } from "react";
 
 const map = {
-  pink: "#ff006e",
+  pink: "#00d9ff",
   cyan: "#00d9ff",
   yellow: "#ffc400",
   mono: "#8a8a8f",

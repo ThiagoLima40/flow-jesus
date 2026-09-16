@@ -14,7 +14,7 @@ const config: Config = {
         brand: {
           white: "#ffffff",
           yellow: "#ffc400",
-          pink: "#ff006e",
+          pink: "#00d9ff",
           cyan: "#00d9ff",
           red: "#ff3b1d",
         },
@@ -31,7 +31,7 @@ const config: Config = {
         sticker: "14px",
       },
       boxShadow: {
-        glowPink: "0 0 40px -8px rgba(255,0,110,0.55)",
+        glowPink: "0 0 40px -8px rgba(0,217,255,0.5)",
         glowCyan: "0 0 40px -8px rgba(0,217,255,0.5)",
         glowYellow: "0 0 40px -8px rgba(255,196,0,0.5)",
         card: "0 20px 60px -20px rgba(0,0,0,0.9)",

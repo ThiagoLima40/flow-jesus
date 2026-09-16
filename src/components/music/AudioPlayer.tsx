@@ -33,7 +33,7 @@ export function AudioPlayer() {
     <div className="relative overflow-hidden border border-white/10 bg-black/40 p-6 md:p-10">
       <div
         className="pointer-events-none absolute inset-0 opacity-40"
-        style={{ background: "radial-gradient(80% 60% at 20% 0%, rgba(255,0,110,0.18), transparent 60%)" }}
+        style={{ background: "radial-gradient(80% 60% at 20% 0%, rgba(0,217,255,0.18), transparent 60%)" }}
       />
       <div className="relative flex flex-col items-center gap-8 lg:flex-row">
         {/* capa */}

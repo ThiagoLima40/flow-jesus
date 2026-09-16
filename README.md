@@ -59,3 +59,8 @@ preparada para integração).
 
 Preencha os caminhos nos arquivos de `src/data/*` — o placeholder some sozinho.
 Detalhes em `public/images/README.md`.
+
+
+### Secrets no build do Worker
+
+Use `npm run build:worker`. O script compila em uma pasta temporária sem arquivos `.env`/`.dev.vars`, sem chaves locais e sem credenciais herdadas do processo. O ambiente gerado pelo OpenNext precisa estar vazio para o pacote ser aceito. Os secrets de produção continuam nos bindings do Cloudflare. Não execute o OpenNext diretamente: use o script isolado para evitar incorporar arquivos de ambiente.

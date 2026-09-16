@@ -24,3 +24,24 @@ test('quote rejects invalid CEP and returns custom price and delivery time', asy
   });
   assert.deepEqual(response, [{ id: 1, name: 'PAC', company: 'Correios', price: 27.5, delivery_time: 5, delivery_range: null }]);
 });
+
+
+test('provider errors and transport failures never escape as public credential-bearing messages', async () => {
+  const key = b64(crypto.getRandomValues(new Uint8Array(32)));
+  const cfg = { originPostalCode: '01001000', baseUrl: 'https://melhorenvio.com.br', tokenKey: key, connectionId: 'id', userAgent: 'FlowJesus' };
+  const encrypted = await encrypt({ access_token: 'private-access', refresh_token: 'private-refresh' }, key, cfg.connectionId);
+  const store = { read: async () => ({ status: 'connected', lock_owner: null, expires_at: Date.now() + 4 * 86400000, encrypted_tokens: encrypted }) };
+  const input = { toPostalCode: '01310100', products: [{ id: 'shirt', width: 25, height: 8, length: 30, weight: .3, insuranceValue: 99, quantity: 1 }] };
+  for (const provider of [
+    async () => Response.json({ message: 'Bearer private-access', refresh_token: 'private-refresh', headers: { Authorization: 'private-header' } }, { status: 401 }),
+    async () => Response.json({ message: 'client_secret=private-secret' }, { status: 422 }),
+    async () => new Response('private-raw-body', { status: 500 }),
+    async () => { throw new Error('private-transport-secret'); },
+  ]) {
+    await assert.rejects(calculateQuote(store, cfg, input, provider), error => {
+      assert.doesNotMatch(error.message, /private-|Bearer|client_secret|Authorization/);
+      assert.match(error.message, /Não foi possível calcular|resposta inválida/);
+      return true;
+    });
+  }
+});

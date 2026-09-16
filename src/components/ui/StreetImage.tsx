@@ -5,7 +5,7 @@ type Accent = "pink" | "cyan" | "yellow" | "mono";
 type Kind = "photo" | "product" | "video" | "cover";
 
 const accentHex: Record<Accent, string> = {
-  pink: "#ff006e",
+  pink: "#00d9ff",
   cyan: "#00d9ff",
   yellow: "#ffc400",
   mono: "#8a8a8f",
@@ -77,7 +77,7 @@ export function StreetImage({
         <span className="absolute inset-0 z-[3] flex items-center justify-center">
           <span
             className="flex h-14 w-14 items-center justify-center rounded-full shadow-glowPink"
-            style={{ background: "#ff006e" }}
+            style={{ background: "#00d9ff" }}
           >
             <svg viewBox="0 0 24 24" className="ml-0.5 h-6 w-6 fill-white">
               <path d="M8 5v14l11-7z" />

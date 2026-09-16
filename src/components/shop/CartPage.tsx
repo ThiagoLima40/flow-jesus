@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
+import { pixDiscountCents } from "@/lib/pricing";
 import { useCart } from "@/context/CartContext";
 import { formatBRL, getProductImages } from "@/data/products";
 import { StreetImage } from "@/components/ui/StreetImage";
@@ -12,7 +13,14 @@ export function CartPage() {
   const { items, getProduct, updateQuantity, removeItem, subtotal, count, clearCart } = useCart();
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
-  const discount = appliedCoupon === "FLOW10" ? Math.round(subtotal * 10) / 100 : 0;
+  const [paymentMethod, setPaymentMethod] = useState<"other" | "pix">("other");
+  const [pixEmail, setPixEmail] = useState("");
+  const subtotalCents = items.reduce((sum, item) => sum + Math.round((getProduct(item.productId)?.price ?? 0) * 100) * item.qty, 0);
+  const couponDiscount = appliedCoupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0;
+  const pixDiscount = paymentMethod === "pix" ? pixDiscountCents(subtotalCents) : 0;
+  const discount = (couponDiscount + pixDiscount) / 100;
+  const pixEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixEmail.trim()) && pixEmail.trim().length <= 254;
+  const pixAttempt = useRef<{ key: string; id: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [postalCode, setPostalCode] = useState("");
@@ -36,7 +44,7 @@ export function CartPage() {
   }, [quoteKey]);
   const selectedOption = quotedKey === quoteKey ? shippingOptions.find((option) => option.id === selectedShipping) : undefined;
   const shipping = selectedOption?.price ?? 0;
-  const total = Math.max(0, subtotal - discount) + shipping;
+  const total = (subtotalCents - couponDiscount - pixDiscount + Math.round(shipping * 100)) / 100;
 
   const applyCoupon = () => {
     setAppliedCoupon(coupon.trim().toUpperCase() === "FLOW10" ? "FLOW10" : "");
@@ -65,7 +73,11 @@ export function CartPage() {
   };
 
   const startCheckout = async () => {
-    if (checkoutPending.current || shippingLoading || !selectedOption) return;
+    if (checkoutPending.current || shippingLoading || !selectedOption || (paymentMethod === "pix" && !pixEmailValid)) return;
+    const attemptKey = JSON.stringify({ items, postalCode, shipping, appliedCoupon, paymentMethod, email: pixEmail.trim() });
+    if (paymentMethod === "pix" && pixAttempt.current?.key !== attemptKey) {
+      pixAttempt.current = { key: attemptKey, id: crypto.randomUUID() };
+    }
     checkoutPending.current = true;
     setSubmitting(true);
     setCheckoutError("");
@@ -75,6 +87,7 @@ export function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items,
+          ...(paymentMethod === "pix" ? { paymentMethod: "pix", payerEmail: pixEmail.trim(), pixRequestId: pixAttempt.current!.id } : {}),
           shipping: { amountCents: Math.round(shipping * 100), serviceId: selectedOption.id, postalCode },
           coupon: appliedCoupon,
           discountCents: Math.round(discount * 100),
@@ -202,6 +215,23 @@ export function CartPage() {
           {shippingError && <p role="alert" className="mt-2 text-xs text-brand-pink">{shippingError}</p>}
           {quotedKey === quoteKey && shippingOptions.length > 0 && <fieldset className="mt-3 space-y-2"><legend className="sr-only">Modalidades disponíveis</legend>{shippingOptions.map((option) => <label key={option.id} className={`flex cursor-pointer items-center justify-between gap-3 border p-3 text-xs ${selectedShipping === option.id ? "border-brand-pink bg-brand-pink/5" : "border-white/10"}`}><span className="flex min-w-0 items-start"><input type="radio" name="shipping-option" checked={selectedShipping === option.id} onChange={() => setSelectedShipping(option.id)} className="mr-2 mt-0.5 shrink-0 accent-brand-pink" /><span className="leading-5">{option.name}{option.company ? ` · ${option.company}` : ""}<br /><span className="text-white/55">Prazo: {option.delivery_time} dias úteis</span></span></span><strong className="shrink-0 text-brand-yellow">{formatBRL(option.price)}</strong></label>)}</fieldset>}
 
+          <fieldset className="mt-6 space-y-3" disabled={submitting}>
+            <legend className="mb-2 font-display text-sm tracking-wide">FORMA DE PAGAMENTO</legend>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="radio" name="payment-method" checked={paymentMethod === "other"} onChange={() => setPaymentMethod("other")} className="accent-brand-pink" />
+              Cartão e outros meios
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="radio" name="payment-method" checked={paymentMethod === "pix"} onChange={() => setPaymentMethod("pix")} className="accent-brand-pink" />
+              Pix — 5% OFF nos produtos
+            </label>
+            {paymentMethod === "pix" && <div>
+              <label htmlFor="pix-email" className="mb-2 block text-xs text-white/70">E-mail para o pagamento Pix</label>
+              <input id="pix-email" type="email" autoComplete="email" maxLength={254} required value={pixEmail} onChange={e => setPixEmail(e.target.value)} className="h-11 w-full border border-white/20 bg-transparent px-3 text-sm" />
+              <p className="mt-2 text-xs text-white/55">5% sobre o subtotal dos produtos. O frete não recebe desconto.</p>
+            </div>}
+          </fieldset>
+
           <dl className="mt-6 space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-white/60">Subtotal</dt>
@@ -212,16 +242,20 @@ export function CartPage() {
               <dd>{selectedOption ? (shipping === 0 ? "Grátis" : formatBRL(shipping)) : "A calcular"}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-white/60">Desconto</dt>
-              <dd className="text-brand-cyan">{discount > 0 ? `- ${formatBRL(discount)}` : "—"}</dd>
+              <dt className="text-white/60">Desconto do cupom</dt>
+              <dd className="text-brand-cyan">{couponDiscount > 0 ? `- ${formatBRL(couponDiscount / 100)}` : "—"}</dd>
             </div>
+            {paymentMethod === "pix" && <div className="flex justify-between">
+              <dt className="text-white/60">Desconto Pix (5%)</dt>
+              <dd className="text-brand-cyan">- {formatBRL(pixDiscount / 100)}</dd>
+            </div>}
             <div className="flex justify-between border-t border-white/10 pt-3">
               <dt className="font-display tracking-[0.15em]">{selectedOption ? "TOTAL" : "TOTAL SEM FRETE"}</dt>
               <dd className="font-brush text-2xl text-brand-yellow">{formatBRL(total)}</dd>
             </div>
           </dl>
 
-          <button type="button" onClick={startCheckout} disabled={submitting || shippingLoading || !selectedOption} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
+          <button type="button" onClick={startCheckout} disabled={submitting || shippingLoading || !selectedOption || (paymentMethod === "pix" && !pixEmailValid)} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
             <span>{submitting ? "AGUARDE..." : "FINALIZAR COMPRA"}</span>
             <ArrowRight className="h-4 w-4" />
           </button>

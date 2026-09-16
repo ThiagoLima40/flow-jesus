@@ -6,11 +6,15 @@
    FLOW JESUS — DESIGN TOKENS
    ============================================================ */
 :root {
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  --font-brush: "Trebuchet MS", cursive;
   --ink: #050505;
   --ink-soft: #0c0c0d;
   --white: #ffffff;
   --yellow: #ffc400;
-  --pink: #ff006e;
+  /* Legacy token name kept for component compatibility; rendered as FlowJesus cyan. */
+  --pink: #00d9ff;
   --cyan: #00d9ff;
   --red: #ff3b1d;
 
@@ -95,7 +99,7 @@ body {
   background-color: var(--ink);
   background-image:
     radial-gradient(60% 50% at 12% 8%, rgba(0, 217, 255, 0.08), transparent 60%),
-    radial-gradient(55% 45% at 92% 22%, rgba(255, 0, 110, 0.09), transparent 60%),
+    radial-gradient(55% 45% at 92% 22%, rgba(0, 217, 255, 0.09), transparent 60%),
     radial-gradient(50% 40% at 78% 92%, rgba(255, 196, 0, 0.06), transparent 60%);
 }
 
@@ -174,7 +178,7 @@ body {
   color: #fff;
 }
 .btn-pink:hover {
-  box-shadow: 0 0 34px -6px rgba(255, 0, 110, 0.75);
+  box-shadow: 0 0 34px -6px rgba(0, 217, 255, 0.65);
   transform: translateY(-2px);
 }
 .btn-outline {
