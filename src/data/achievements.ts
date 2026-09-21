@@ -12,9 +12,8 @@ export type Achievement = {
 };
 
 export const achievements: Achievement[] = [
-  { id: "a1", value: "28", label: "CAMPEONATOS", sub: "Nacionais e internacionais", icon: "trophy", accent: "yellow" },
-  { id: "a2", value: "73", label: "MEDALHAS", sub: "Ouro, prata e bronze", icon: "medal", accent: "pink" },
-  { id: "a3", value: "4.500+", label: "HORAS", sub: "De treino e dedicação", icon: "clock", accent: "cyan" },
+  { id: "a1", value: "+200", label: "CAMPEONATOS", sub: "Nacionais e internacionais", icon: "trophy", accent: "yellow" },
+  { id: "a2", value: "+500", label: "MEDALHAS", sub: "Ouro, prata e bronze", icon: "medal", accent: "pink" },
   { id: "a4", value: "1", label: "PROPÓSITO", sub: "Glorificar a Deus em tudo", icon: "crown", accent: "yellow" },
 ];
 

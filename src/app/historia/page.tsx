@@ -43,12 +43,14 @@ export default function HistoriaPage() {
           </p>
           <div className="relative">
             <StreetImage
-              src=""
-              alt="Isaque Lima"
+              src="/images/historia/bandeira-brasil.jpg"
+              alt="Isaque com medalha e cinturão diante da bandeira do Brasil"
+              priority
+              sizes="(max-width: 767px) 320px, 288px"
               kind="cover"
               accent="yellow"
               label="ISAQUE LIMA"
-              className="aspect-square w-full max-w-xs shadow-card md:w-72"
+              className="aspect-[4/5] w-full max-w-xs shadow-card md:w-72 [&>img]:object-top"
             />
             <StampSeal className="absolute -bottom-5 -right-4 h-24 w-20 text-brand-pink" />
           </div>
@@ -68,7 +70,15 @@ export default function HistoriaPage() {
             <span className="text-white">CONQUISTAS QUE </span>
             <span className="text-brand-yellow">GLORIFICAM</span>
           </GraffitiTitle>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="mb-6">
+            <StreetImage
+              src="/images/historia/conquistas-medalhas.jpg"
+              alt="Isaque com várias medalhas no peito e outras medalhas ao fundo"
+              sizes="288px"
+              className="mx-auto aspect-[3/4] w-full max-w-72 border border-brand-yellow/30 [&>img]:object-top"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 [&>div]:p-3 sm:[&>div]:p-6">
             {achievements.map((a, i) => (
               <AchievementCard key={a.id} item={a} index={i} />
             ))}
