@@ -4,10 +4,10 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { gallery, galleryCategories, type GalleryItem } from "@/data/gallery";
-import { StreetImage } from "@/components/ui/StreetImage";
+import Image from "next/image";
 
 const spanClass: Record<GalleryItem["span"], string> = {
-  tall: "row-span-2 aspect-[3/4]",
+  tall: "aspect-[3/4]",
   wide: "aspect-[3/2]",
   square: "aspect-square",
 };
@@ -59,21 +59,21 @@ export function GalleryClient({ items }: { items?: GalleryItem[] }) {
         {list.length === 0 ? (
           <p className="py-24 text-center text-white/50">Nenhuma imagem nesta categoria ainda.</p>
         ) : (
-          <div className="grid auto-rows-[minmax(0,1fr)] grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className="columns-2 gap-3 md:columns-3 lg:columns-4">
             {list.map((g, i) => (
               <button
                 key={g.id}
                 onClick={() => setIdx(i)}
-                className={`group relative overflow-hidden ${spanClass[g.span]}`}
+                className={`group relative mb-3 block w-full break-inside-avoid overflow-hidden ${spanClass[g.span]}`}
                 aria-label={`Abrir ${g.alt}`}
               >
-                <StreetImage
+                <Image
                   src={g.src}
                   alt={g.alt}
-                  kind="photo"
-                  accent={g.accent}
-                  label={g.category.toUpperCase()}
-                  className="h-full w-full transition-transform duration-500 group-hover:scale-110"
+                  fill
+                  sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                  style={{ objectPosition: g.objectPosition ?? "50% 50%" }}
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <span className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
               </button>
@@ -94,10 +94,10 @@ export function GalleryClient({ items }: { items?: GalleryItem[] }) {
             aria-modal="true"
             aria-label={openItem.alt}
           >
-            <button onClick={close} aria-label="Fechar" className="absolute right-4 top-4 rounded-full p-2 hover:bg-white/10">
+            <button onClick={close} aria-label="Fechar" className="absolute right-4 top-4 z-10 rounded-full p-2 hover:bg-white/10">
               <X className="h-8 w-8" />
             </button>
-            <button onClick={prev} aria-label="Anterior" className="absolute left-2 rounded-full p-2 hover:bg-white/10 md:left-8">
+            <button onClick={prev} aria-label="Anterior" className="absolute left-2 z-10 rounded-full bg-black/40 p-2 hover:bg-white/10 md:left-8">
               <ChevronLeft className="h-9 w-9" />
             </button>
             <motion.div
@@ -106,17 +106,18 @@ export function GalleryClient({ items }: { items?: GalleryItem[] }) {
               animate={{ scale: 1, opacity: 1 }}
               className="max-h-[80vh] w-full max-w-3xl"
             >
-              <StreetImage
-                src={openItem.src}
-                alt={openItem.alt}
-                kind="photo"
-                accent={openItem.accent}
-                label={openItem.alt}
-                className="aspect-[4/3] w-full"
-              />
+              <div className="relative h-[65vh] w-full">
+                <Image
+                  src={openItem.src}
+                  alt={openItem.alt}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="object-contain"
+                />
+              </div>
               <p className="mt-3 text-center text-sm text-white/60">{openItem.alt}</p>
             </motion.div>
-            <button onClick={next} aria-label="Próxima" className="absolute right-2 rounded-full p-2 hover:bg-white/10 md:right-8">
+            <button onClick={next} aria-label="Próxima" className="absolute right-2 z-10 rounded-full bg-black/40 p-2 hover:bg-white/10 md:right-8">
               <ChevronRight className="h-9 w-9" />
             </button>
           </motion.div>
