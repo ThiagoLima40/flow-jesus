@@ -5,7 +5,6 @@ import { BjjClient } from "@/components/bjj/BjjClient";
 import { AchievementCard } from "@/components/story/AchievementCard";
 import { GraffitiTitle } from "@/components/ui/GraffitiTitle";
 import { testimonials } from "@/data/testimonials";
-import { bjjStats } from "@/data/achievements";
 import { StampSeal } from "@/components/ui/Graphics";
 import { Reveal } from "@/components/ui/Reveal";
 import type { Achievement } from "@/data/achievements";
@@ -18,14 +17,12 @@ export const metadata: Metadata = {
 const accentText = { pink: "text-brand-pink", cyan: "text-brand-cyan", yellow: "text-brand-yellow", mono: "text-white" } as const;
 
 export default function FlowBjjPage() {
-  const stats: Achievement[] = bjjStats.map((s, i) => ({
-    id: `bs${i}`,
-    value: s.value,
-    label: s.label,
-    sub: "",
-    icon: s.icon as Achievement["icon"],
-    accent: s.accent,
-  }));
+  const stats: Achievement[] = [
+    { id: "bs0", value: "+200", label: "CAMPEONATOS", sub: "Nacionais e internacionais", icon: "trophy", accent: "yellow" },
+    { id: "bs1", value: "+500", label: "MEDALHAS", sub: "Ouro, prata e bronze", icon: "clock", accent: "cyan" },
+    { id: "bs2", value: "FÉ +", label: "DISCIPLINA", sub: "Dentro e fora do tatame", icon: "users", accent: "pink" },
+    { id: "bs3", value: "1", label: "PROPÓSITO", sub: "Glorificar a Deus em tudo", icon: "cross", accent: "yellow" },
+  ];
 
   return (
     <>

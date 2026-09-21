@@ -1,17 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, Play } from "lucide-react";
-import { videos, videoCategories, type Video } from "@/data/videos";
-import { StreetImage } from "@/components/ui/StreetImage";
+import { Instagram } from "lucide-react";
+import { videos, videoCategories } from "@/data/videos";
+import Image from "next/image";
+import type { Video } from "@/data/videos";
+
+const videoCovers: Record<Video["category"], { src: string; position: string }> = {
+  treinos: { src: "/images/flow-bjj/treinos.jpg", position: "50% 32%" },
+  campeonatos: { src: "/images/flow-bjj/campeonatos.jpg", position: "50% 35%" },
+  bastidores: { src: "/images/flow-bjj/bastidores.jpg", position: "50% 30%" },
+  oracao: { src: "/images/flow-bjj/oracao.jpg", position: "50% 15%" },
+  testemunho: { src: "/images/flow-bjj/testemunho.jpg", position: "50% 5%" },
+  viagens: { src: "/images/flow-bjj/viagens.jpg", position: "50% 60%" },
+  preparacao: { src: "/images/flow-bjj/preparacao.jpg", position: "50% 35%" },
+};
 
 export function BjjClient() {
   const [cat, setCat] = useState<string>("todos");
-  const [open, setOpen] = useState<Video | null>(null);
 
   const list = useMemo(
-    () => (cat === "todos" ? videos : videos.filter((v) => v.category === cat)),
+    () => videos.filter((v) => v.instagramUrl && (cat === "todos" || v.category === cat)),
     [cat]
   );
 
@@ -44,16 +53,38 @@ export function BjjClient() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((v) => (
-              <button key={v.id} onClick={() => setOpen(v)} className="group text-left">
+              <a
+                key={v.id}
+                href={v.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${v.title} — Assistir no Instagram (abre em nova aba)`}
+                className="group block text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-yellow"
+              >
                 <div className="relative overflow-hidden">
-                  <StreetImage
-                    src=""
-                    alt={v.title}
-                    kind="video"
-                    accent={v.accent}
-                    label={v.title}
-                    className="aspect-video w-full transition-transform duration-500 group-hover:scale-105"
-                  />
+                  <div className="relative aspect-video w-full overflow-hidden transition-transform duration-500 group-hover:scale-105">
+                    <Image
+                      src={videoCovers[v.category].src}
+                      alt={v.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover"
+                      style={{ objectPosition: videoCovers[v.category].position }}
+                    />
+                    <span aria-hidden="true" className="absolute inset-0 z-[3] flex items-center justify-center">
+                      <span
+                        className="flex h-14 w-14 items-center justify-center rounded-full shadow-glowPink"
+                        style={{ background: "#00d9ff" }}
+                      >
+                        <svg viewBox="0 0 24 24" className="ml-0.5 h-6 w-6 fill-white">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </span>
+                    </span>
+                  </div>
+                  <span className="absolute right-2 top-2 z-10 rounded bg-black/70 p-1.5">
+                    <Instagram aria-hidden="true" className="h-4 w-4" />
+                  </span>
                   <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs tabular-nums">
                     {v.duration}
                   </span>
@@ -62,66 +93,15 @@ export function BjjClient() {
                   {v.title}
                 </h3>
                 <p className="text-sm text-white/55">{v.description}</p>
-              </button>
+                <span className="mt-2 inline-block font-display text-xs tracking-wide text-brand-yellow">
+                  Assistir no Instagram
+                </span>
+              </a>
             ))}
           </div>
         )}
       </div>
 
-      {/* modal de vídeo */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setOpen(null)}
-            role="dialog"
-            aria-modal="true"
-            aria-label={open.title}
-          >
-            <motion.div
-              className="relative w-full max-w-4xl"
-              initial={{ scale: 0.94, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.94, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setOpen(null)}
-                aria-label="Fechar vídeo"
-                className="absolute -top-12 right-0 rounded-full p-2 text-white hover:bg-white/10"
-              >
-                <X className="h-7 w-7" />
-              </button>
-              <div className="relative flex aspect-video items-center justify-center border border-white/10 bg-ink-soft">
-                {open.youtubeId ? (
-                  <iframe
-                    className="h-full w-full"
-                    src={`https://www.youtube.com/embed/${open.youtubeId}`}
-                    title={open.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="text-center">
-                    <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-pink shadow-glowPink">
-                      <Play className="ml-1 h-7 w-7 fill-white" />
-                    </span>
-                    <p className="mt-4 font-brush text-2xl">{open.title}</p>
-                    <p className="text-sm text-white/50">Vídeo placeholder — pronto para integração com YouTube.</p>
-                  </div>
-                )}
-              </div>
-              <div className="mt-4">
-                <h3 className="font-display text-lg tracking-wide">{open.title}</h3>
-                <p className="text-white/60">{open.description}</p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }
