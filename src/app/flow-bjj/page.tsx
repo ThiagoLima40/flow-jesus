@@ -45,12 +45,15 @@ export default function FlowBjjPage() {
       >
         <Reveal className="relative mt-10">
           <StreetImage
-            src=""
-            alt="Isaque Lima com kimono no tatame"
+            src="/images/flow-bjj/hero-flow-bjj.jpg"
+            alt="Isaque Lima de kimono branco em ação durante uma luta de jiu-jítsu"
+            fit="cover"
+            priority
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 95vw, 1216px"
             kind="cover"
             accent="pink"
             label="ISAQUE LIMA · TATAME"
-            className="aspect-[16/7] w-full shadow-card"
+            className="aspect-[3/2] w-full shadow-card sm:aspect-[16/7] [&_img]:object-[50%_75%]"
           />
           <StampSeal className="absolute -bottom-6 right-6 h-24 w-20 text-brand-yellow" />
         </Reveal>
