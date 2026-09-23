@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Keep the brand typography deterministic and offline during Worker builds.
+     The browser uses the named fonts when installed and the same fallbacks
+     that were previously used by next/font/google. */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Anton", Impact, sans-serif;
+  --font-brush: "Permanent Marker", "Comic Sans MS", cursive;
+}
+
 /* ============================================================
    FLOW JESUS — DESIGN TOKENS
    ============================================================ */

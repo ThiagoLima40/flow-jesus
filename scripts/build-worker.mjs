@@ -17,8 +17,8 @@ export function buildEnvironment(env) {
 export function prepareBuild(source, stage) {
   const entries = ['src', 'public', 'scripts', 'package.json', 'package-lock.json',
     'next.config.mjs', 'open-next.config.ts', 'tsconfig.json', 'tailwind.config.ts',
-    'postcss.config.mjs', '.eslintrc.json', 'wrangler.json'];
-  for (const entry of entries) {
+    'postcss.config.mjs', '.eslintrc.json', 'wrangler.json', 'next-env.d.ts'];
+  for (const entry of entries.filter(entry => fs.existsSync(path.join(source, entry)))) {
     fs.cpSync(path.join(source, entry), path.join(stage, entry), {
       recursive: true,
       filter: file => {

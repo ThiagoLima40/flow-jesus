@@ -10,8 +10,8 @@ function load(file) {
 }
 const { pixDiscountCents, productPixPrice } = load('src/lib/pricing.ts');
 const { createPixPayment } = load('src/lib/pix-payment.ts');
-const input = {amountCents:10671,email:'test@example.com',requestId:'11111111-1111-4111-8111-111111111111',order:{items:[{productId:'flow-70x7',qty:1}],shipping:{amountCents:1266}}};
-const valid = {transaction_amount:106.71,currency_id:'BRL',payment_method_id:'pix',status:'pending',status_detail:'pending_waiting_transfer',point_of_interaction:{transaction_data:{qr_code:'test',ticket_url:'https://www.mercadopago.com.br/payments/123/ticket'}}};
+const input = {amountCents:10671,email:'test@example.com',orderNumber:'FJ-11111111-1111-4111-8111-111111111111'};
+const valid = {id:123,transaction_amount:106.71,currency_id:'BRL',payment_method_id:'pix',status:'pending',status_detail:'pending_waiting_transfer',point_of_interaction:{transaction_data:{qr_code:'test',ticket_url:'https://www.mercadopago.com.br/payments/123/ticket'}}};
 
 test('99 BRL is 94.05 on PIX; rounding happens once on the full subtotal', () => {
   assert.equal(productPixPrice(99),94.05);
@@ -28,14 +28,15 @@ test('99 BRL is 94.05 on PIX; rounding happens once on the full subtotal', () =>
 test('PIX payment total is exact and retries reuse an order-bound idempotency key', async () => {
   const calls=[];
   const fetchImpl=async(url,options)=>{calls.push({url,...options,body:JSON.parse(options.body)});return Response.json(valid)};
-  assert.equal(await createPixPayment('secret-test',input,fetchImpl),valid.point_of_interaction.transaction_data.ticket_url);
+  assert.deepEqual(await createPixPayment('secret-test',input,fetchImpl),{id:'123',url:valid.point_of_interaction.transaction_data.ticket_url});
   await createPixPayment('secret-test',input,fetchImpl);
   assert.equal(calls[0].headers['X-Idempotency-Key'],calls[1].headers['X-Idempotency-Key']);
   assert.equal(calls[0].body.transaction_amount,106.71);
   assert.equal(calls[0].body.payment_method_id,'pix');
   assert.equal(calls[0].url,'https://api.mercadopago.com/v1/payments');
   assert(!JSON.stringify(calls[0].body).includes('secret-test'));
-  for (const change of [{email:'other@example.com'},{order:{items:[{productId:'other',qty:1}]}},{requestId:'new-attempt'}]) {
+  assert.equal(calls[0].body.external_reference, input.orderNumber);
+  for (const change of [{orderNumber:'FJ-new-order'}]) {
     await createPixPayment('secret-test',{...input,...change},fetchImpl);
     assert.notEqual(calls.at(-1).headers['X-Idempotency-Key'],calls[0].headers['X-Idempotency-Key']);
   }
@@ -43,6 +44,7 @@ test('PIX payment total is exact and retries reuse an order-bound idempotency ke
 
 test('PIX rejects mismatched amounts, other payment methods, missing QR, unsafe URLs and terminal states', async () => {
   for(const change of [
+    {id:undefined},{id:0},{id:{}},
     {transaction_amount:99},{transaction_amount:'106.71'},{payment_method_id:'visa'}, {currency_id:'USD'},
     {status:'rejected'},{status:'approved'}, {status_detail:'accredited'},
     {point_of_interaction:null},

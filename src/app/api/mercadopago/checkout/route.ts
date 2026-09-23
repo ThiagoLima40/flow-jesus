@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { pixDiscountCents } from "@/lib/pricing";
-import { createPixPayment } from "@/lib/pix-payment";
+import { createPixPayment } from "@/lib/legacy-pix-payment";
 import { products } from "@/data/products";
 
+// Temporary compatibility endpoint for previously published clients.
+// New clients must use /api/orders/checkout; never fall back here after an order error.
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const mercadoPagoCheckoutEndpoint = "https://api.mercadopago.com/checkout/preferences";
 
@@ -19,7 +22,7 @@ export async function POST(request: NextRequest) {
         headers: { "Content-Type": "application/json" },
         body: await request.text(),
         cache: "no-store",
-        signal: AbortSignal.timeout(25000),
+        signal: AbortSignal.timeout(55000),
       });
       return NextResponse.json(await response.json(), { status: response.status });
     } catch {
@@ -48,8 +51,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  if (!body || typeof body !== "object") {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  // A malformed new order must not be silently charged via the legacy flow.
+  if (["customer", "address", "checkoutRequestId"].some(key => key in body)) {
+    return NextResponse.json({ error: "Use o novo checkout para registrar os dados do pedido." }, { status: 409 });
   }
 
   const { items, shipping, coupon, discountCents, totalCents, paymentMethod, payerEmail, pixRequestId } = body as {

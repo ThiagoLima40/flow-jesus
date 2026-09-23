@@ -1,20 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Anton, Permanent_Marker, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/shop/CartDrawer";
 import { site } from "@/data/site";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-display", display: "swap" });
-const marker = Permanent_Marker({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-brush",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -50,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${anton.variable} ${marker.variable}`}>
+    <html lang="pt-BR">
       <body className="bg-ink text-white antialiased">
         <Providers>
           <div className="grain-overlay" aria-hidden />

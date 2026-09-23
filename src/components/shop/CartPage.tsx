@@ -8,19 +8,21 @@ import { formatBRL, getProductImages } from "@/data/products";
 import { StreetImage } from "@/components/ui/StreetImage";
 import { Button } from "@/components/ui/Button";
 import { Cross } from "@/components/ui/Graphics";
+import { brazilianStates, parseOrderContact, validCheckoutId, type Customer } from "@/lib/order-input";
 
 export function CartPage() {
   const { items, getProduct, updateQuantity, removeItem, subtotal, count, clearCart } = useCart();
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"other" | "pix">("other");
-  const [pixEmail, setPixEmail] = useState("");
+  const [customer, setCustomer] = useState<Customer>({ name: "", email: "", phone: "" });
+  const [address, setAddress] = useState({ street: "", number: "", complement: "", neighborhood: "", city: "", state: "" });
+  const [orderNumber, setOrderNumber] = useState("");
   const subtotalCents = items.reduce((sum, item) => sum + Math.round((getProduct(item.productId)?.price ?? 0) * 100) * item.qty, 0);
   const couponDiscount = appliedCoupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0;
   const pixDiscount = paymentMethod === "pix" ? pixDiscountCents(subtotalCents) : 0;
   const discount = (couponDiscount + pixDiscount) / 100;
-  const pixEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixEmail.trim()) && pixEmail.trim().length <= 254;
-  const pixAttempt = useRef<{ key: string; id: string } | null>(null);
+  const checkoutAttempt = useRef<{ key: string; id: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [postalCode, setPostalCode] = useState("");
@@ -73,29 +75,39 @@ export function CartPage() {
   };
 
   const startCheckout = async () => {
-    if (checkoutPending.current || shippingLoading || !selectedOption || (paymentMethod === "pix" && !pixEmailValid)) return;
-    const attemptKey = JSON.stringify({ items, postalCode, shipping, appliedCoupon, paymentMethod, email: pixEmail.trim() });
-    if (paymentMethod === "pix" && pixAttempt.current?.key !== attemptKey) {
-      pixAttempt.current = { key: attemptKey, id: crypto.randomUUID() };
-    }
+    if (checkoutPending.current || shippingLoading || !selectedOption) return;
+    const contact = parseOrderContact(customer, { ...address, postalCode, country: "BR" });
+    if (!contact) { setCheckoutError("Confira nome, e-mail, telefone com DDD e endereço completo para entrega."); return; }
     checkoutPending.current = true;
     setSubmitting(true);
     setCheckoutError("");
     try {
-      const response = await fetch("/api/mercadopago/checkout", {
+      const intent = { items, ...contact, paymentMethod,
+        shipping: { amountCents: Math.round(shipping * 100), serviceId: selectedOption.id, postalCode },
+        coupon: appliedCoupon, discountCents: Math.round(discount * 100), totalCents: Math.round(total * 100) };
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(intent)));
+      const attemptKey = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+      // Store only an opaque attempt ID and digest, never the delivery/contact data.
+      if (!checkoutAttempt.current) {
+        try {
+          const saved = JSON.parse(sessionStorage.getItem("flowjesus.checkout-attempt.v1") || "null");
+          if (saved && typeof saved.key === "string" && validCheckoutId(saved.id)) checkoutAttempt.current = saved;
+        } catch { /* Storage may be disabled. The in-page ref still protects retries. */ }
+      }
+      if (checkoutAttempt.current?.key !== attemptKey) {
+        checkoutAttempt.current = { key: attemptKey, id: crypto.randomUUID() };
+      }
+      try { sessionStorage.setItem("flowjesus.checkout-attempt.v1", JSON.stringify(checkoutAttempt.current)); } catch { /* Optional retry aid. */ }
+      const response = await fetch("/api/orders/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items,
-          ...(paymentMethod === "pix" ? { paymentMethod: "pix", payerEmail: pixEmail.trim(), pixRequestId: pixAttempt.current!.id } : {}),
-          shipping: { amountCents: Math.round(shipping * 100), serviceId: selectedOption.id, postalCode },
-          coupon: appliedCoupon,
-          discountCents: Math.round(discount * 100),
-          totalCents: Math.round(total * 100),
+          ...intent, checkoutRequestId: checkoutAttempt.current.id,
         }),
       });
       const result = await response.json();
-      if (!response.ok || typeof result.checkout_url !== "string") {
+      setOrderNumber(typeof result.order_number === "string" ? result.order_number : "");
+      if (!response.ok || typeof result.checkout_url !== "string" || typeof result.order_number !== "string") {
         throw new Error(result.error || "Não foi possível iniciar o pagamento.");
       }
       window.location.assign(result.checkout_url);
@@ -186,6 +198,48 @@ export function CartPage() {
               CONTINUAR COMPRANDO
             </Button>
           </div>
+          <form id="order-contact" onSubmit={event => { event.preventDefault(); void startCheckout(); }} className="py-6">
+            <fieldset disabled={submitting} className="space-y-5">
+              <legend className="mb-5 font-brush text-2xl">Dados para entrega</legend>
+              <p className="text-sm text-white/60">Informe quem receberá a compra e o endereço completo. Usaremos estes dados para preparar e enviar seu pedido.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {([
+                  ["name", "Nome completo", "text", "name", 120],
+                  ["email", "E-mail", "email", "email", 254],
+                  ["phone", "Telefone com DDD", "tel", "tel", 25],
+                ] as const).map(([key, label, type, autoComplete, maxLength]) => <label key={key} className="block text-sm">
+                  <span className="mb-2 block text-white/70">{label}</span>
+                  <input name={key} type={type} autoComplete={autoComplete} required maxLength={maxLength} value={customer[key]}
+                    onChange={event => setCustomer(current => ({ ...current, [key]: event.target.value }))}
+                    className="h-11 w-full border border-white/20 bg-transparent px-3 outline-none focus:border-brand-cyan" />
+                </label>)}
+                <label className="block text-sm"><span className="mb-2 block text-white/70">CEP de entrega</span>
+                  <input name="postalCode" autoComplete="shipping postal-code" inputMode="numeric" required pattern="[0-9]{8}" maxLength={8} value={postalCode}
+                    onChange={event => setPostalCode(event.target.value.replace(/\D/g, "").slice(0, 8))}
+                    className="h-11 w-full border border-white/20 bg-transparent px-3 outline-none focus:border-brand-cyan" />
+                </label>
+                {([
+                  ["street", "Rua / avenida", "shipping address-line1", 160],
+                  ["number", "Número (ou S/N)", "off", 20],
+                  ["complement", "Complemento (opcional)", "shipping address-line2", 120],
+                  ["neighborhood", "Bairro", "shipping address-level3", 100],
+                  ["city", "Cidade", "shipping address-level2", 100],
+                ] as const).map(([key, label, autoComplete, maxLength]) => <label key={key} className="block text-sm">
+                  <span className="mb-2 block text-white/70">{label}</span>
+                  <input name={key} autoComplete={autoComplete} required={key !== "complement"} maxLength={maxLength} value={address[key]}
+                    onChange={event => setAddress(current => ({ ...current, [key]: event.target.value }))}
+                    className="h-11 w-full border border-white/20 bg-transparent px-3 outline-none focus:border-brand-cyan" />
+                </label>)}
+                <label className="block text-sm"><span className="mb-2 block text-white/70">Estado</span>
+                  <select name="state" autoComplete="shipping address-level1" required value={address.state}
+                    onChange={event => setAddress(current => ({ ...current, state: event.target.value }))}
+                    className="h-11 w-full border border-white/20 bg-ink px-3 outline-none focus:border-brand-cyan">
+                    <option value="">Selecione</option>{brazilianStates.map(state => <option key={state} value={state}>{state}</option>)}
+                  </select>
+                </label>
+              </div>
+            </fieldset>
+          </form>
         </div>
 
         {/* resumo */}
@@ -225,11 +279,7 @@ export function CartPage() {
               <input type="radio" name="payment-method" checked={paymentMethod === "pix"} onChange={() => setPaymentMethod("pix")} className="accent-brand-pink" />
               Pix — 5% OFF nos produtos
             </label>
-            {paymentMethod === "pix" && <div>
-              <label htmlFor="pix-email" className="mb-2 block text-xs text-white/70">E-mail para o pagamento Pix</label>
-              <input id="pix-email" type="email" autoComplete="email" maxLength={254} required value={pixEmail} onChange={e => setPixEmail(e.target.value)} className="h-11 w-full border border-white/20 bg-transparent px-3 text-sm" />
-              <p className="mt-2 text-xs text-white/55">5% sobre o subtotal dos produtos. O frete não recebe desconto.</p>
-            </div>}
+            {paymentMethod === "pix" && <p className="mt-2 text-xs text-white/55">5% sobre o subtotal dos produtos. O frete não recebe desconto. O Pix usará o e-mail informado nos dados para entrega.</p>}
           </fieldset>
 
           <dl className="mt-6 space-y-3 text-sm">
@@ -255,11 +305,12 @@ export function CartPage() {
             </div>
           </dl>
 
-          <button type="button" onClick={startCheckout} disabled={submitting || shippingLoading || !selectedOption || (paymentMethod === "pix" && !pixEmailValid)} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
+          <button type="submit" form="order-contact" disabled={submitting || shippingLoading || !selectedOption} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
             <span>{submitting ? "AGUARDE..." : "FINALIZAR COMPRA"}</span>
             <ArrowRight className="h-4 w-4" />
           </button>
           {checkoutError && <p role="alert" className="mt-3 text-sm text-brand-pink">{checkoutError}</p>}
+          {orderNumber && <p className="mt-3 break-all text-sm text-white/70">Pedido: {orderNumber}. Se precisar de ajuda, <a href="/contato" className="underline">entre em contato</a>.</p>}
           <p className="mt-3 text-center text-xs text-white/40">{selectedOption ? "Compra segura · Pagamento pelo Mercado Pago" : "Calcule o frete e selecione uma opção para finalizar."}</p>
         </aside>
       </div>

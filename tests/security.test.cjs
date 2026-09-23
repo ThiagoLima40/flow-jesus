@@ -1,9 +1,13 @@
-const { test } = require('node:test');
+const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const ts = require('typescript');
+const { databaseFixture, contact } = require('./helpers/orders.cjs');
+let fixture;
+before(async () => { fixture = await databaseFixture(); });
+after(async () => { await fixture?.close(); });
 function load(file, dependencies = {}, globals = {}) {
   const exports = {};
   new Function('exports', 'require', ...Object.keys(globals), ts.transpileModule(fs.readFileSync(file, 'utf8'), {
@@ -21,23 +25,26 @@ test('Mercado Pago logs contain only fixed events, endpoints and numeric status 
   ]) {
     for (const pix of [false, true]) {
       const logs = [];
-      const { POST } = load('src/app/api/mercadopago/checkout/route.ts', {
+      const { POST } = load('src/app/api/orders/checkout/route.ts', {
         'next/server': { NextResponse: { json: (value, init) => Response.json(value, init) } },
-        '@opennextjs/cloudflare': { getCloudflareContext: () => ({ env: { MERCADOPAGO_ACCESS_TOKEN: 'private-binding' } }) },
+        '@opennextjs/cloudflare': { getCloudflareContext: () => ({ env: { MERCADOPAGO_ACCESS_TOKEN: 'private-binding', ORDERS_DB: fixture.db } }) },
+        '@/lib/order-input': load('src/lib/order-input.ts'),
+        '@/lib/order-store': load('src/lib/order-store.ts', {}, { crypto: require('node:crypto').webcrypto }),
         '@/data/products': load('src/data/products.ts'), '@/lib/pricing': load('src/lib/pricing.ts'),
         '@/lib/pix-payment': { createPixPayment: () => { throw new Error('private-pix-error'); } },
       }, { process: { env: {} }, crypto: require('node:crypto').webcrypto,
         console: { error: (...args) => logs.push(args) },
-        fetch: async url => url.endsWith('/quote') ? Response.json({ services: [{ id: 2, price: 12.66 }] }) : failure(),
+        fetch: async url => url.endsWith('/quote') ? Response.json({ services: [{ id: 2, price: 12.66, name: 'PAC' }] }) : failure(),
       });
-      const response = await POST(new Request('https://example.com/api/mercadopago/checkout', { method: 'POST', body: JSON.stringify({
+      const response = await POST(new Request('https://example.com/api/orders/checkout', { method: 'POST', body: JSON.stringify({
+        ...contact(),
         items: [{ productId: 'flow-70x7', size: 'M', color: 'Preto', qty: 1 }],
         shipping: { amountCents: 1266, serviceId: 2, postalCode: '01310100' }, coupon: '', discountCents: pix ? 495 : 0, totalCents: pix ? 10671 : 11166,
-        ...(pix ? { paymentMethod: 'pix', payerEmail: 'audit@example.com', pixRequestId: '11111111-1111-4111-8111-111111111111' } : {}),
+        ...(pix ? { paymentMethod: 'pix' } : {}),
       }) }));
       assert.equal(response.status, 502);
       assert.equal(logs.length, 1);
-      assert.doesNotMatch(JSON.stringify(logs) + await response.text(), /private-|audit@example/);
+      assert.doesNotMatch(JSON.stringify(logs) + await response.text(), /private-|test@example|Cliente Teste|Avenida Teste/);
       assert.deepEqual(Object.keys(logs[0][1]).sort(), logs[0][1].status ? ['endpoint', 'status'] : ['endpoint']);
     }
   }
@@ -68,4 +75,3 @@ test('Worker staging omits secret files and environment, rejects nonempty embedd
     verifyBuild(stage);
   } finally { fs.rmSync(fixture, { recursive: true, force: true }); }
 });
-

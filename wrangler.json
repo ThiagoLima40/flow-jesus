@@ -8,6 +8,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "d1_databases": [{
+    "binding": "ORDERS_DB",
+    "database_name": "flowjesus-melhor-envio",
+    "database_id": "225fe3ac-c8f0-44c7-8d0e-6f8cd21e7bca",
+    "migrations_dir": "migrations/orders",
+    "migrations_table": "flowjesus_order_migrations"
+  }],
   "kv_namespaces": [
     // Create a KV binding with the binding name "NEXT_CACHE_WORKERS_KV"
     // to enable the KV based caching:

@@ -48,12 +48,14 @@ public/images/    # ver images/README.md — como trocar placeholders por fotos 
   pinceladas, spray e texturas de ruído — em `components/ui/Graphics.tsx` e `globals.css`.
 - Tokens em `tailwind.config.ts` + `globals.css`.
 
-## Pronto para o futuro
+## Checkout e pedidos
 
-Dados isolados em `src/data/*` e contextos desacoplados — plugar CMS, API de
-estoque, gateway de pagamento e pedidos exige apenas trocar a fonte de dados.
-O checkout **não processa pagamento real** nem armazena dados de cartão (estrutura
-preparada para integração).
+O checkout usa Mercado Pago e cotação pelo Melhor Envio. A estrutura de pedidos
+registra contato, endereço, itens e valores no D1 antes de iniciar o pagamento,
+mantendo a Vercel como frontend/API e o Worker como responsável pela persistência.
+A ativação depende da nova migração e da publicação coordenada do Worker e da Vercel;
+essas ações não fazem parte da implementação local. Veja [ORDERS.md](ORDERS.md)
+para arquitetura, campos, tratamento de falhas, testes e preparação para webhook.
 
 ## Substituir imagens
 
