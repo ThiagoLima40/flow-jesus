@@ -78,7 +78,7 @@ export function Hero() {
               ["1", "PROPÓSITO", "Glorificar a Deus em tudo", "text-brand-yellow"],
             ].map(([n, l, sub, c]) => (
               <div key={l}>
-                <p className={`font-brush text-4xl ${c}`}>{n}</p>
+                <p className={`font-display text-4xl ${c}`}>{n}</p>
                 <p className="font-display text-sm tracking-[0.15em] text-white/55">{l}</p>
                 <p className="mt-1 text-xs text-white/45">{sub}</p>
               </div>
