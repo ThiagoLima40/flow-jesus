@@ -70,15 +70,17 @@ export function Hero() {
           </motion.div>
 
           {/* mini-stats */}
-          <motion.div {...rise(0.5)} className="mt-10 flex gap-8 border-t border-white/10 pt-6">
+          <motion.div {...rise(0.5)} className="mt-10 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-white/10 pt-6 md:grid-cols-4">
             {[
-              ["28", "CAMPEONATOS", "text-brand-yellow"],
-              ["+1.000", "NO MOVIMENTO", "text-brand-cyan"],
-              ["1", "PROPÓSITO", "text-brand-pink"],
-            ].map(([n, l, c]) => (
+              ["+200", "CAMPEONATOS", "Nacionais e internacionais", "text-brand-yellow"],
+              ["+500", "MEDALHAS", "Ouro, prata e bronze", "text-brand-cyan"],
+              ["FÉ +", "DISCIPLINA", "Dentro e fora do tatame", "text-brand-pink"],
+              ["1", "PROPÓSITO", "Glorificar a Deus em tudo", "text-brand-yellow"],
+            ].map(([n, l, sub, c]) => (
               <div key={l}>
                 <p className={`font-brush text-3xl ${c}`}>{n}</p>
                 <p className="font-display text-[0.6rem] tracking-[0.18em] text-white/55">{l}</p>
+                <p className="mt-1 text-xs leading-snug text-white/45">{sub}</p>
               </div>
             ))}
           </motion.div>
