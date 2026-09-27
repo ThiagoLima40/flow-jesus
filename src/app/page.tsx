@@ -7,6 +7,7 @@ import { BjjPreview } from "@/components/home/BjjPreview";
 import { Movement } from "@/components/home/Movement";
 import { FinalCta } from "@/components/home/FinalCta";
 import { FlowPlaySpotify } from "@/components/home/FlowPlaySpotify";
+import { InternationalSupport } from "@/components/home/InternationalSupport";
 
 // Reativar somente após substituir os depoimentos provisórios por relatos reais.
 const showMovementTestimonials = false;
@@ -22,6 +23,7 @@ export default function HomePage() {
       <BjjPreview />
       {showMovementTestimonials && <Movement />}
       <FinalCta />
+      <InternationalSupport />
       <FlowPlaySpotify />
     </>
   );
