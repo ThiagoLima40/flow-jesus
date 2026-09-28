@@ -55,10 +55,18 @@ export class OrderStore {
     return result.meta.changes === 1;
   }
   async attachPayment(number: string, payment: { id: string; url: string; kind: "payment" | "preference" }) {
-    const result = await this.db.prepare(`UPDATE orders SET mercado_pago_payment_id = ?, mercado_pago_preference_id = ?,
-      checkout_url = ?, payment_setup_status = 'ready', updated_at = ? WHERE order_number = ? AND payment_setup_status = 'creating'`)
-      .bind(payment.kind === "payment" ? payment.id : null, payment.kind === "preference" ? payment.id : null,
-        payment.url, new Date().toISOString(), number).run();
+    const paymentId = payment.kind === "payment" ? payment.id : null;
+    const preferenceId = payment.kind === "preference" ? payment.id : null;
+    // A webhook can arrive before checkout finishes. Preserve its financial state
+    // and references while attaching the URL; never erase a confirmed payment ID.
+    const result = await this.db.prepare(`UPDATE orders SET mercado_pago_payment_id = COALESCE(mercado_pago_payment_id, ?),
+      mercado_pago_preference_id = COALESCE(mercado_pago_preference_id, ?),
+      checkout_url = ?, payment_setup_status = 'ready', updated_at = ? WHERE order_number = ?
+      AND payment_setup_status IN ('creating', 'ready')
+      AND (? IS NULL OR mercado_pago_payment_id IS NULL OR mercado_pago_payment_id = ?)
+      AND (? IS NULL OR mercado_pago_preference_id IS NULL OR mercado_pago_preference_id = ?)`)
+      .bind(paymentId, preferenceId, payment.url, new Date().toISOString(), number,
+        paymentId, paymentId, preferenceId, preferenceId).run();
     if (result.meta.changes !== 1) throw new Error("Payment reference storage unavailable");
   }
   async requireReview(number: string) {
