@@ -11,7 +11,7 @@ export type OrderSnapshot = {
   customer: Customer; address: DeliveryAddress;
   items: { productId: string; name: string; color: string; size: string; quantity: number; unitPriceCents: number; subtotalCents: number }[];
   subtotalCents: number; coupon: string; couponDiscountCents: number; pixDiscountCents: number;
-  shipping: { serviceId: number; name: string; company: string | null; amountCents: number };
+  shipping: { mode?: "delivery" | "pickup"; serviceId: number; name: string; company: string | null; amountCents: number };
   totalCents: number; paymentMethod: "pix" | "other";
 };
 export type StoredOrder = {
@@ -37,13 +37,13 @@ export class OrderStore {
       order_number, checkout_key, request_hash, customer_name, customer_email, customer_phone,
       address_json, items_json, subtotal_cents, coupon, coupon_discount_cents, pix_discount_cents,
       shipping_service_id, shipping_name, shipping_company, shipping_cents, total_cents,
-      payment_method, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      payment_method, created_at, updated_at, shipping_mode
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(checkout_key) DO NOTHING`).bind(number, checkoutKey, requestHash,
       order.customer.name, order.customer.email, order.customer.phone, JSON.stringify(order.address), JSON.stringify(order.items),
       order.subtotalCents, order.coupon, order.couponDiscountCents, order.pixDiscountCents,
       order.shipping.serviceId, order.shipping.name, order.shipping.company, order.shipping.amountCents,
-      order.totalCents, order.paymentMethod, now, now).run();
+      order.totalCents, order.paymentMethod, now, now, order.shipping.mode ?? "delivery").run();
     const stored = await this.find(checkoutKey);
     if (!stored) throw new Error("Order storage unavailable");
     return stored;

@@ -15,7 +15,9 @@ async function databaseFixture() {
     compatibilityDate: '2024-12-01', d1Databases: ['ORDERS_DB'] });
   try {
     const db = await mf.getD1Database('ORDERS_DB');
-    for (const sql of fs.readFileSync('migrations/orders/0001_orders.sql', 'utf8').split(';').filter(s => s.trim())) await db.prepare(sql).run();
+    for (const file of fs.readdirSync('migrations/orders').filter(file => file.endsWith('.sql')).sort()) {
+      for (const sql of fs.readFileSync(`migrations/orders/${file}`, 'utf8').split(';').filter(s => s.trim())) await db.prepare(sql).run();
+    }
     return { db, close: () => mf.dispose() };
   } catch (error) { await mf.dispose(); throw error; }
 }

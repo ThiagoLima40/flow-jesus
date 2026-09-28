@@ -43,7 +43,7 @@ function setup(vercel = false, catalogOverride = catalog, shippingPrice = 24.9, 
     process: { env: vercel ? { VERCEL: '1' } : {} },
     crypto: require('node:crypto').webcrypto,
     fetch: async (url, options) => {
-      if (url.endsWith('/quote')) return Response.json({ services: [{ id: 1, price: shippingPrice, name: 'PAC', company: 'Correios' }] });
+      if (url.endsWith('/quote')) { if (overrides.onQuote) overrides.onQuote(); return Response.json({ services: [{ id: 1, price: shippingPrice, name: 'PAC', company: 'Correios' }] }); }
       calls.push({ url, options, body: JSON.parse(options.body) });
       if (overrides.onPayment) await overrides.onPayment(JSON.parse(options.body));
       return Response.json(vercel ? (overrides.proxyResponse ?? { order_number: 'FJ-test', checkout_url: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=test' }) :
@@ -404,4 +404,57 @@ test('new Vercel never switches to the legacy route when the order service fails
   assert.equal((await post(order(1,2490))).status,502);
   assert.equal(calls.length,1);
   assert.equal(calls[0].url,'https://flow-jesus.flowjesusoficial.workers.dev/api/orders/checkout');
+});
+
+for (const paymentMethod of ['other', 'pix']) {
+  test(`pickup persists free shipping and preserves discounts with ${paymentMethod}`, async () => {
+    const { post, calls } = setup(false, catalog, 24.9, { onQuote() { assert.fail('Pickup must not quote freight'); } });
+    const body = order(2, 0, 'FLOW10');
+    body.shipping = { mode: 'pickup', amountCents: 0 };
+    body.paymentMethod = paymentMethod;
+    if (paymentMethod === 'pix') { body.discountCents += 990; body.totalCents -= 990; }
+    const response = await post(body);
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    const saved = await fixture.db.prepare('SELECT * FROM orders WHERE order_number = ?').bind(result.order_number).first();
+    assert.equal(saved.shipping_mode, 'pickup');
+    assert.equal(saved.shipping_cents, 0);
+    assert.equal(saved.shipping_name, 'Retirada no local — Grátis');
+    assert.equal(JSON.parse(saved.address_json).postalCode, body.address.postalCode);
+    assert.equal(saved.total_cents, body.totalCents);
+    assert.equal(calls.length, 1);
+    if (paymentMethod === 'pix') assert.equal(calls[0].body.transaction_amount, body.totalCents / 100);
+    else {
+      assert.equal(calls[0].body.items.some(item => item.id === 'shipping'), false);
+      assert.equal(calls[0].body.items.reduce((sum, item) => sum + Math.round(item.unit_price * 100) * item.quantity, 0), body.totalCents);
+    }
+    assert.equal((await post(body)).status, 200);
+    assert.equal(calls.length, 1);
+    const delivery = { ...body, shipping: { amountCents: 0, serviceId: 1, postalCode: body.address.postalCode } };
+    assert.equal((await post(delivery)).status, 409);
+  });
+}
+
+test('pickup rejects nonzero freight, unknown modes, tampered totals and missing address', async () => {
+  for (const change of [
+    { shipping: { mode: 'pickup', amountCents: 100 } },
+    { shipping: { mode: 'unknown', amountCents: 0 } },
+    { totalCents: 1 }, { address: null },
+  ]) {
+    const { post, calls } = setup(false, catalog, 24.9, { onQuote() { assert.fail('Invalid pickup must not quote'); } });
+    assert.equal((await post({ ...order(1, 0), shipping: { mode: 'pickup', amountCents: 0 }, ...change })).status, 400);
+    assert.equal(calls.length, 0);
+  }
+});
+
+test('delivery persists its mode and still verifies freight with Melhor Envio', async () => {
+  let quotes = 0;
+  const { post } = setup(false, catalog, 24.9, { onQuote() { quotes += 1; } });
+  const response = await post(order(1, 2490));
+  assert.equal(response.status, 200);
+  const { order_number } = await response.json();
+  const saved = await fixture.db.prepare('SELECT shipping_mode, shipping_cents FROM orders WHERE order_number = ?').bind(order_number).first();
+  assert.equal(saved.shipping_mode, 'delivery');
+  assert.equal(saved.shipping_cents, 2490);
+  assert.equal(quotes, 1);
 });

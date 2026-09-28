@@ -126,8 +126,11 @@ export async function POST(request: NextRequest) {
   let verifiedShipping: OrderSnapshot["shipping"] | undefined;
   let requestHash = "";
   if (cartCheckout) {
-    const { amountCents, serviceId, postalCode } = shipping as { amountCents?: unknown; serviceId?: unknown; postalCode?: unknown };
-    if (!Number.isSafeInteger(serviceId) || typeof postalCode !== "string" || !/^\d{8}$/.test(postalCode) || postalCode !== contact.address.postalCode) {
+    const { mode, amountCents, serviceId, postalCode } = shipping as { mode?: unknown; amountCents?: unknown; serviceId?: unknown; postalCode?: unknown };
+    const pickup = mode === "pickup";
+    if (mode !== undefined && mode !== "delivery" && !pickup) return json({ error: "Modalidade de entrega inválida." }, 400);
+    if (pickup && amountCents !== 0) return json({ error: "A retirada no local deve ser grátis." }, 400);
+    if (!pickup && (!Number.isSafeInteger(serviceId) || typeof postalCode !== "string" || !/^\d{8}$/.test(postalCode) || postalCode !== contact.address.postalCode)) {
       return NextResponse.json({ error: "Calcule o frete e selecione uma modalidade." }, { status: 400 });
     }
     const expectedDiscount = (coupon === "FLOW10" ? Math.round(subtotalCents / 10) : 0) + (isPix ? pixDiscountCents(subtotalCents) : 0);
@@ -139,7 +142,7 @@ export async function POST(request: NextRequest) {
     // Canonical, validated client intent: retries reuse a stored payment even
     // if the carrier later changes its quote. No PII is used as a lookup key.
     try {
-      requestHash = await orderRequestHash({ ...contact, items: savedItems, shipping: { amountCents, serviceId, postalCode }, coupon, totalCents, paymentMethod });
+      requestHash = await orderRequestHash({ ...contact, items: savedItems, shipping: pickup ? { mode: "pickup", amountCents: 0 } : { amountCents, serviceId, postalCode }, coupon, totalCents, paymentMethod });
       const previous = await store.find(checkoutRequestId);
       if (previous) {
         const response = existingCheckout(previous, requestHash);
@@ -148,26 +151,30 @@ export async function POST(request: NextRequest) {
     } catch {
       return json({ error: "Não foi possível registrar o pedido. Nenhum pagamento foi iniciado. Tente novamente." }, 503);
     }
-    try {
-      const quoteResponse = await fetch("https://flowjesus-melhor-envio.flowjesusoficial.workers.dev/api/melhor-envio/quote", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toPostalCode: postalCode, products: (items as CheckoutItem[]).map(item => ({
-          id: item.productId, width: 25, height: 8, length: 30, weight: 0.3,
-          insuranceValue: products.find(p => p.id === item.productId)!.price, quantity: item.qty,
-        })) }),
-        cache: "no-store", signal: AbortSignal.timeout(20000),
-      });
-      const quote = await quoteResponse.json();
-      if (!quoteResponse.ok || !Array.isArray(quote.services)) throw new Error("quote unavailable");
-      const service = quote.services.find((option: { id: number }) => option.id === serviceId);
-      if (!service || typeof service.price !== "number" || !Number.isFinite(service.price) || service.price < 0 || Math.round(service.price * 100) !== amountCents ||
-          typeof service.name !== "string" || !service.name.trim() || service.name.length > 120 ||
-          (service.company != null && (typeof service.company !== "string" || service.company.length > 120))) {
-        return NextResponse.json({ error: "O frete mudou ou está indisponível. Calcule novamente e selecione uma opção." }, { status: 409 });
+    if (pickup) {
+      verifiedShipping = { mode: "pickup", serviceId: 0, name: "Retirada no local — Grátis", company: null, amountCents: 0 };
+    } else {
+      try {
+        const quoteResponse = await fetch("https://flowjesus-melhor-envio.flowjesusoficial.workers.dev/api/melhor-envio/quote", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ toPostalCode: postalCode, products: (items as CheckoutItem[]).map(item => ({
+            id: item.productId, width: 25, height: 8, length: 30, weight: 0.3,
+            insuranceValue: products.find(p => p.id === item.productId)!.price, quantity: item.qty,
+          })) }),
+          cache: "no-store", signal: AbortSignal.timeout(20000),
+        });
+        const quote = await quoteResponse.json();
+        if (!quoteResponse.ok || !Array.isArray(quote.services)) throw new Error("quote unavailable");
+        const service = quote.services.find((option: { id: number }) => option.id === serviceId);
+        if (!service || typeof service.price !== "number" || !Number.isFinite(service.price) || service.price < 0 || Math.round(service.price * 100) !== amountCents ||
+            typeof service.name !== "string" || !service.name.trim() || service.name.length > 120 ||
+            (service.company != null && (typeof service.company !== "string" || service.company.length > 120))) {
+          return NextResponse.json({ error: "O frete mudou ou está indisponível. Calcule novamente e selecione uma opção." }, { status: 409 });
+        }
+        verifiedShipping = { mode: "delivery", serviceId: serviceId as number, name: service.name, company: service.company ?? null, amountCents: amountCents as number };
+      } catch {
+        return NextResponse.json({ error: "Não foi possível confirmar o frete. Calcule novamente." }, { status: 502 });
       }
-      verifiedShipping = { serviceId: serviceId as number, name: service.name, company: service.company ?? null, amountCents: amountCents as number };
-    } catch {
-      return NextResponse.json({ error: "Não foi possível confirmar o frete. Calcule novamente." }, { status: 502 });
     }
     shippingCents = amountCents as number;
     // Rateia o desconto em centavos, preservando os produtos e as quantidades.

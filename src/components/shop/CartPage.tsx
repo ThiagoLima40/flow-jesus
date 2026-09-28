@@ -29,6 +29,8 @@ export function CartPage() {
   const [checkoutError, setCheckoutError] = useState("");
   const [postalCode, setPostalCode] = useState("");
   type ShippingOption = { id: number; name: string; company: string | null; price: number; delivery_time: number };
+  const [shippingMode, setShippingMode] = useState<"delivery" | "pickup">("delivery");
+  const pickup = shippingMode === "pickup";
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<number | null>(null);
   const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | undefined>();
@@ -37,7 +39,7 @@ export function CartPage() {
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [cepLookupError, setCepLookupError] = useState("");
   const checkoutPending = useRef(false);
-  const quoteKey = JSON.stringify({ postalCode, items });
+  const quoteKey = JSON.stringify({ postalCode, items, shippingMode });
   const currentQuoteKey = useRef(quoteKey);
   currentQuoteKey.current = quoteKey;
   const requestId = useRef(0);
@@ -83,7 +85,8 @@ export function CartPage() {
     setShippingLoading(false);
   }, [quoteKey]);
   const selectedOption = quotedKey === quoteKey && selectedShippingOption?.id === selectedShipping ? selectedShippingOption : undefined;
-  const shipping = selectedOption?.price ?? 0;
+  const shipping = pickup ? 0 : selectedOption?.price ?? 0;
+  const fulfillmentReady = pickup || (!!selectedOption && !shippingLoading);
   const total = (subtotalCents - couponDiscount - pixDiscount + Math.round(shipping * 100)) / 100;
 
   const applyCoupon = () => {
@@ -91,7 +94,7 @@ export function CartPage() {
   };
 
   const calculateShipping = async () => {
-    if (postalCode.length !== 8 || !items.length) return;
+    if (pickup || postalCode.length !== 8 || !items.length) return;
     const id = ++requestId.current;
     const key = quoteKey;
     setShippingOptions([]); setSelectedShipping(null); setSelectedShippingOption(undefined); setQuotedKey("");
@@ -113,7 +116,7 @@ export function CartPage() {
   };
 
   const startCheckout = async () => {
-    if (checkoutPending.current || shippingLoading || !selectedOption) return;
+    if (checkoutPending.current || !fulfillmentReady) return;
     const contact = parseOrderContact(customer, { ...address, postalCode, country: "BR" });
     if (!contact) { setCheckoutError("Confira nome, e-mail, telefone com DDD e endereço completo para entrega."); return; }
     checkoutPending.current = true;
@@ -121,7 +124,7 @@ export function CartPage() {
     setCheckoutError("");
     try {
       const intent = { items, ...contact, paymentMethod,
-        shipping: { amountCents: Math.round(shipping * 100), serviceId: selectedOption.id, postalCode },
+        shipping: pickup ? { mode: "pickup", amountCents: 0 } : { amountCents: Math.round(shipping * 100), serviceId: selectedOption!.id, postalCode },
         coupon: appliedCoupon, discountCents: Math.round(discount * 100), totalCents: Math.round(total * 100) };
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(intent)));
       const attemptKey = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
@@ -238,10 +241,10 @@ export function CartPage() {
           </div>
           {showDeliveryForm && <form id="order-contact" onSubmit={event => { event.preventDefault(); if (!showPayment) setShowPayment(true); else void startCheckout(); }} className="py-6">
             <fieldset disabled={submitting} className="space-y-4">
-              <legend className="mb-3 font-brush text-2xl">Dados para entrega</legend>
-              <p className="text-sm text-white/60">Confira os dados para entrega. O endereço foi preenchido pelo CEP.</p>
+              <legend className="mb-3 font-brush text-2xl">{pickup ? "Dados do cliente" : "Dados para entrega"}</legend>
+              <p className="text-sm text-white/60">{pickup ? "Mantenha seu endereço completo para identificação do pedido. A retirada não cobra frete." : "Confira os dados para entrega. O endereço foi preenchido pelo CEP."}</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm sm:col-span-2"><span className="mb-2 block text-white/70">CEP de entrega</span>
+                <label className="block text-sm sm:col-span-2"><span className="mb-2 block text-white/70">{pickup ? "CEP do cliente" : "CEP de entrega"}</span>
                   <input name="postalCode" autoComplete="shipping postal-code" inputMode="numeric" required pattern="[0-9]{8}" maxLength={8} value={postalCode}
                     onChange={event => setPostalCode(event.target.value.replace(/\D/g, "").slice(0, 8))}
                     placeholder="00000000" className="h-11 w-full border border-white/20 bg-transparent px-3 outline-none focus:border-brand-cyan" />
@@ -289,7 +292,7 @@ export function CartPage() {
               value={coupon}
               onChange={(e) => setCoupon(e.target.value)}
               placeholder="Cupom (ex: FLOW10)"
-              className="h-11 flex-1 border border-white/20 bg-transparent px-3 text-sm outline-none focus:border-brand-cyan"
+              className="h-11 min-w-0 flex-1 border border-white/20 bg-transparent px-3 text-sm outline-none focus:border-brand-cyan"
               aria-label="Cupom de desconto"
             />
             <button onClick={applyCoupon} className="border border-white/20 px-4 text-sm hover:border-brand-pink">
@@ -297,6 +300,23 @@ export function CartPage() {
             </button>
           </div>
 
+          <fieldset className="mt-5 space-y-2" disabled={submitting}>
+            <legend className="mb-2 font-display text-sm tracking-wide">RECEBIMENTO</legend>
+            {([['delivery', 'Entrega'], ['pickup', 'Retirada no local — Grátis']] as const).map(([mode, label]) => (
+              <label key={mode} className={`flex min-h-12 cursor-pointer items-center gap-3 border p-3 text-sm ${shippingMode === mode ? "border-brand-pink bg-brand-pink/5" : "border-white/20"}`}>
+                <input type="radio" name="shipping-mode" checked={shippingMode === mode} onChange={() => { requestId.current += 1; setShippingMode(mode); }} className="shrink-0 accent-brand-pink" />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          {pickup && <div className="mt-3 space-y-3 text-sm leading-6 text-white/70">
+            <p>
+              Rua Professora Anna Rita Ludke, 44 — Vila Argos Nova<br />
+              Jundiaí/SP — CEP 13201-541
+            </p>
+            <p>Após a confirmação do pagamento, entraremos em contato pelo WhatsApp para combinar a retirada.</p>
+          </div>}
+          {!pickup && <>
           <div className="mt-4">
             <label htmlFor="shipping-postal-code" className="mb-2 block text-xs font-display tracking-[0.14em] text-white/70">CEP DE ENTREGA</label>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -307,6 +327,8 @@ export function CartPage() {
           </div>
           {shippingError && <p role="alert" className="mt-2 text-xs text-brand-pink">{shippingError}</p>}
           {quotedKey === quoteKey && shippingOptions.length > 0 && <fieldset className="mt-3 space-y-2"><legend className="sr-only">Modalidades disponíveis</legend>{shippingOptions.map((option) => <label key={option.id} className={`flex cursor-pointer items-center justify-between gap-3 border p-3 text-xs ${selectedShipping === option.id ? "border-brand-pink bg-brand-pink/5" : "border-white/10"}`}><span className="flex min-w-0 items-start"><input type="radio" name="shipping-option" checked={selectedShipping === option.id} onChange={() => { setSelectedShipping(option.id); setSelectedShippingOption(option); }} className="mr-2 mt-0.5 shrink-0 accent-brand-pink" /><span className="leading-5">{option.name}{option.company ? ` · ${option.company}` : ""}<br /><span className="text-white/55">Prazo: {option.delivery_time} dias úteis</span></span></span><strong className="shrink-0 text-brand-yellow">{formatBRL(option.price)}</strong></label>)}</fieldset>}
+
+          </>}
 
           {showPayment && <fieldset className="mt-6 space-y-3" disabled={submitting}>
             <legend className="mb-2 font-display text-sm tracking-wide">FORMA DE PAGAMENTO</legend>
@@ -327,8 +349,8 @@ export function CartPage() {
               <dd>{formatBRL(subtotal)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-white/60">Frete</dt>
-              <dd>{selectedOption ? (shipping === 0 ? "Grátis" : formatBRL(shipping)) : "A calcular"}</dd>
+              <dt className="text-white/60">{pickup ? "Retirada no local — Grátis" : "Frete"}</dt>
+              <dd>{pickup ? formatBRL(0) : selectedOption ? (shipping === 0 ? "Grátis" : formatBRL(shipping)) : "A calcular"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-white/60">Desconto do cupom</dt>
@@ -339,22 +361,22 @@ export function CartPage() {
               <dd className="text-brand-cyan">- {formatBRL(pixDiscount / 100)}</dd>
             </div>}
             <div className="flex justify-between border-t border-white/10 pt-3">
-              <dt className="font-display tracking-[0.15em]">{selectedOption ? "TOTAL" : "TOTAL SEM FRETE"}</dt>
+              <dt className="font-display tracking-[0.15em]">{fulfillmentReady ? "TOTAL" : "TOTAL SEM FRETE"}</dt>
               <dd className="font-brush text-2xl text-brand-yellow">{formatBRL(total)}</dd>
             </div>
           </dl>
 
-          {!showDeliveryForm && <button type="button" onClick={() => setShowDeliveryForm(true)} disabled={submitting || shippingLoading || !selectedOption} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
+          {!showDeliveryForm && <button type="button" onClick={() => setShowDeliveryForm(true)} disabled={submitting || !fulfillmentReady} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
             <span>FINALIZAR COMPRA</span>
             <ArrowRight className="h-4 w-4" />
           </button>}
-          {showPayment && <button type="submit" form="order-contact" disabled={submitting || shippingLoading || !selectedOption} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
+          {showPayment && <button type="submit" form="order-contact" disabled={submitting || !fulfillmentReady} aria-busy={submitting} className="btn btn-pink mt-6 w-full justify-center disabled:opacity-50">
             <span>{submitting ? "AGUARDE..." : "IR PARA O MERCADO PAGO"}</span>
             <ArrowRight className="h-4 w-4" />
           </button>}
           {checkoutError && <p role="alert" className="mt-3 text-sm text-brand-pink">{checkoutError}</p>}
           {orderNumber && <p className="mt-3 break-all text-sm text-white/70">Pedido: {orderNumber}. Se precisar de ajuda, <a href="/contato" className="underline">entre em contato</a>.</p>}
-          <p className="mt-3 text-center text-xs text-white/40">{selectedOption ? "Compra segura · Pagamento pelo Mercado Pago" : "Calcule o frete e selecione uma opção para finalizar."}</p>
+          <p className="mt-3 text-center text-xs text-white/40">{fulfillmentReady ? "Compra segura · Pagamento pelo Mercado Pago" : "Calcule o frete e selecione uma opção para finalizar."}</p>
         </aside>
       </div>
     </div>
