@@ -62,6 +62,7 @@ export async function reconcilePayment(db: OrdersDatabase, token: string, paymen
   const order = await db.prepare(`SELECT order_number, total_cents, currency, payment_method, status,
     mercado_pago_payment_id, mercado_pago_preference_id, mercado_pago_status, mercado_pago_updated_at
     FROM orders WHERE order_number = ?`).bind(reference).first<PaymentOrder>();
+  console.info("flowjesus_payment", { stage: "order_lookup", paymentId, orderNumber: reference, found: !!order });
   if (!order) throw new PaymentWebhookError(503);
   const amount = payment.transaction_amount;
   requireMatch(typeof amount === "number" && Number.isFinite(amount) && Math.round(amount * 100) === order.total_cents &&
@@ -117,4 +118,8 @@ export async function reconcilePayment(db: OrdersDatabase, token: string, paymen
       order.mercado_pago_preference_id, order.mercado_pago_updated_at).run();
   // Concurrent change: ask the provider to retry with a fresh API/database read.
   if (result.meta.changes !== 1) throw new PaymentWebhookError(503);
+  console.info("flowjesus_payment", {
+    stage: "order_updated", paymentId, orderNumber: reference,
+    status: statusMap[providerStatus], providerStatus,
+  });
 }

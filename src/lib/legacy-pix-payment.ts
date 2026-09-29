@@ -6,6 +6,7 @@ type PixPaymentInput = {
   requestId: string;
   order: unknown;
 };
+const mercadoPagoWebhookUrl = "https://www.flowjesus.com/api/mercadopago/webhook";
 
 /** Creates only PIX: a discounted payment must never offer card or account balance. */
 export async function createPixPayment(token: string, input: PixPaymentInput, fetchImpl: typeof fetch = fetch) {
@@ -20,6 +21,7 @@ export async function createPixPayment(token: string, input: PixPaymentInput, fe
       description: "FLOW JESUS — compra no Pix (5% de desconto nos produtos)",
       payment_method_id: "pix",
       payer: { email: input.email },
+      notification_url: mercadoPagoWebhookUrl,
     }),
     cache: "no-store",
     signal: AbortSignal.timeout(20000),

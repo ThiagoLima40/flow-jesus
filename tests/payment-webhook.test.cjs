@@ -474,3 +474,46 @@ test('missing Resend key preserves the confirmation and leaves email pending for
   assert.equal(s.emails.length, 0);
   assert.equal((await s.post()).status, 200);
 });
+
+test('Checkout Pro paid with Pix links the existing preference and sends one complete administrative email', async () => {
+  const s = await scenario('other', 'approved');
+  // Mirrors a buyer choosing Pix inside Checkout Pro, rather than direct Pix.
+  s.payment.payment_method_id = 'pix';
+  assert.equal((await s.row()).mercado_pago_payment_id, null);
+  const worker = route(s.env, s.fetchImpl);
+  const proxy = route({}, (url, options) => worker.POST(new Request(url, options)), true);
+  for (let i = 0; i < 3; i++) assert.equal((await proxy.POST(signed(s.number))).status, 200);
+  const row = await s.row();
+  assert.equal(row.status, 'pago');
+  assert.equal(row.paid_at, '2026-09-24T11:59:00.000Z');
+  assert.equal(row.mercado_pago_payment_id, s.number);
+  assert.equal(row.mercado_pago_preference_id, s.preference);
+  assert.equal(row.paid_email_status, 'sent');
+  assert.equal(s.emails.length, 1);
+  assert.deepEqual(s.emails[0].body.to, ['flowjesusoficial@gmail.com']);
+  for (const text of ['PRODUTOS', 'Test', 'Cor: Preto', 'Tamanho: M', 'Quantidade: 1',
+    'Cliente: Cliente Teste', 'Frete: R$ 10,00', 'Total: R$ 110,00']) {
+    assert(s.emails[0].body.text.replace(/\u00a0/g, ' ').includes(text), text);
+  }
+});
+
+test('diagnostics identify Resend HTTP rejection and retry without logging private bodies or credentials', async context => {
+  const entries = [];
+  context.mock.method(console, 'info', (...entry) => entries.push(entry));
+  const s = await scenario('pix', 'approved');
+  const failed = route(s.env, async (url, options) => url === 'https://api.resend.com/emails'
+    ? Response.json({message: 'private-provider-body'}, {status: 403}) : s.fetchImpl(url, options));
+  assert.equal((await failed.POST(signed(s.number))).status, 503);
+  assert(entries.some(([tag, data]) => tag === 'flowjesus_payment' && data.stage === 'order_updated' && data.status === 'pago'));
+  assert(entries.some(([tag, data]) => tag === 'flowjesus_paid_email' && data.event === 'resend_response' && data.status === 403));
+  assert(entries.some(([tag, data]) => tag === 'flowjesus_paid_email' && data.event === 'attempt_failed_pending'));
+  const failedOrder = await s.row();
+  assert.equal(failedOrder.status, 'pago');
+  assert.equal(failedOrder.paid_email_status, 'pending');
+  assert.equal((await s.post()).status, 200);
+  assert.equal((await s.post()).status, 200);
+  assert.equal(s.emails.length, 1);
+  assert(entries.some(([tag, data]) => tag === 'flowjesus_paid_email' && data.event === 'sent_recorded'));
+  assert(entries.some(([tag, data]) => tag === 'flowjesus_paid_email' && data.event === 'skipped_already_sent'));
+  assert.doesNotMatch(JSON.stringify(entries), /private-|access-test-token|webhook-test-secret|resend-test-key|test@example.com|Cliente Teste|Avenida Teste/);
+});

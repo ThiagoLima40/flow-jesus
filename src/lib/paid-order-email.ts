@@ -63,10 +63,17 @@ export async function notifyPaidOrder(
     shipping_cents, total_cents, shipping_mode, shipping_company, shipping_name, payment_method, paid_at,
     paid_email_status, paid_email_payload_json, paid_email_first_attempt_ms, paid_email_lease_until_ms
     FROM orders WHERE ${column} = ? AND status = 'pago'`).bind(resource.id).first<PaidOrder>();
-  if (!order || order.paid_email_status === "sent") return;
+  const audit = (event: string, status?: number) => console.info("flowjesus_paid_email", {
+    event, orderNumber: order?.order_number, resourceId: resource.id,
+    recipient: "flowjesusoficial@gmail.com", ...(status === undefined ? {} : { status }),
+  });
+  if (!order) { audit("skipped_not_paid_or_missing"); return; }
+  if (order.paid_email_status === "sent") { audit("skipped_already_sent"); return; }
   const current = now();
-  if (order.paid_email_status === "review_required") throw unavailable();
-  if (order.paid_email_status === "sending" && (order.paid_email_lease_until_ms ?? 0) > current) throw unavailable();
+  if (order.paid_email_status === "review_required") { audit("review_required"); throw unavailable(); }
+  if (order.paid_email_status === "sending" && (order.paid_email_lease_until_ms ?? 0) > current) {
+    audit("lease_active"); throw unavailable();
+  }
   if (order.paid_email_first_attempt_ms !== null && current - order.paid_email_first_attempt_ms >= retryWindowMs) {
     // An accepted email may have lost its response. Never resend after Resend's
     // deduplication window; retain the record for explicit provider reconciliation.
@@ -74,9 +81,10 @@ export async function notifyPaidOrder(
       WHERE order_number = ? AND paid_email_status IN ('pending', 'sending')
       AND (paid_email_lease_until_ms IS NULL OR paid_email_lease_until_ms <= ?)`)
       .bind(order.order_number, current).run();
+    audit("retry_window_expired");
     throw unavailable();
   }
-  if (!env.RESEND_API_KEY) throw unavailable();
+  if (!env.RESEND_API_KEY) { audit("missing_resend_key"); throw unavailable(); }
   const payload = order.paid_email_payload_json ?? JSON.stringify(emailPayload(order,
     env.CONTACT_FROM_EMAIL || "Contato FlowJesus <contato@flowjesus.com>"));
   const claim = crypto.randomUUID();
@@ -87,7 +95,8 @@ export async function notifyPaidOrder(
       AND (paid_email_lease_until_ms IS NULL OR paid_email_lease_until_ms <= ?)
       AND (paid_email_first_attempt_ms IS NULL OR paid_email_first_attempt_ms > ?)`)
     .bind(claim, current + leaseMs, current, payload, order.order_number, current, current - retryWindowMs).run();
-  if (claimed.meta.changes !== 1) throw unavailable();
+  if (claimed.meta.changes !== 1) { audit("claim_not_acquired"); throw unavailable(); }
+  audit("claimed_sending");
   try {
     // Re-read the frozen payload: another expired attempt may have saved it
     // between our first SELECT and the atomic claim.
@@ -97,12 +106,16 @@ export async function notifyPaidOrder(
         paid_email_payload_json: string; paid_email_first_attempt_ms: number; paid_email_lease_until_ms: number;
       }>();
     if (!frozen || now() >= frozen.paid_email_lease_until_ms || now() - frozen.paid_email_first_attempt_ms >= retryWindowMs) throw unavailable();
+    audit("resend_requested");
     const response = await fetchImpl("https://api.resend.com/emails", {
       method: "POST", headers: {
         Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json",
         "Idempotency-Key": `flowjesus-paid-order/${order.order_number}`,
       }, body: frozen.paid_email_payload_json, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000),
     });
+    // HTTP status is enough to distinguish provider rejection from no request.
+    // Never log the payload, authorization header or raw provider error body.
+    audit("resend_response", response.status);
     if (!response.ok) throw unavailable();
     const result: unknown = await response.json();
     const emailId = (result as { id?: unknown } | null)?.id;
@@ -112,12 +125,14 @@ export async function notifyPaidOrder(
       WHERE order_number = ? AND paid_email_status = 'sending' AND paid_email_claim_token = ?`)
       .bind(emailId, new Date(now()).toISOString(), order.order_number, claim).run();
     if (saved.meta.changes !== 1) throw unavailable();
+    audit("sent_recorded");
   } catch {
     // No provider body, credentials or customer data in errors/logs. Payment
     // stays paid; HTTP 503 lets Mercado Pago redeliver the notification.
     await db.prepare(`UPDATE orders SET paid_email_status = 'pending', paid_email_claim_token = NULL, paid_email_lease_until_ms = NULL
       WHERE order_number = ? AND paid_email_status = 'sending' AND paid_email_claim_token = ?`)
       .bind(order.order_number, claim).run();
+    audit("attempt_failed_pending");
     throw unavailable();
   }
 }

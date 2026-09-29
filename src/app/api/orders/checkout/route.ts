@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const mercadoPagoCheckoutEndpoint = "https://api.mercadopago.com/checkout/preferences";
+const mercadoPagoWebhookUrl = "https://www.flowjesus.com/api/mercadopago/webhook";
 
 type CheckoutItem = { productId: string; size: string; color: string; qty: number };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -244,6 +245,7 @@ export async function POST(request: NextRequest) {
         items: orderItems,
         external_reference: order.order_number,
         payer: { email: contact.customer.email },
+        notification_url: mercadoPagoWebhookUrl,
       }),
       cache: "no-store",
       signal: AbortSignal.timeout(20000),

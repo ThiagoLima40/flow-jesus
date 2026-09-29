@@ -36,6 +36,7 @@ test('PIX payment total is exact and retries reuse an order-bound idempotency ke
   assert.equal(calls[0].url,'https://api.mercadopago.com/v1/payments');
   assert(!JSON.stringify(calls[0].body).includes('secret-test'));
   assert.equal(calls[0].body.external_reference, input.orderNumber);
+  assert.equal(calls[0].body.notification_url, 'https://www.flowjesus.com/api/mercadopago/webhook');
   for (const change of [{orderNumber:'FJ-new-order'}]) {
     await createPixPayment('secret-test',{...input,...change},fetchImpl);
     assert.notEqual(calls.at(-1).headers['X-Idempotency-Key'],calls[0].headers['X-Idempotency-Key']);

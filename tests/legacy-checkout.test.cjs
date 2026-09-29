@@ -140,6 +140,7 @@ for (const [qty, shipping, coupon] of [[1, 1266, ''], [2, 1737, ''], [100, 5000,
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, 'https://api.mercadopago.com/v1/payments');
     assert.equal(calls[0].body.payment_method_id, 'pix');
+    assert.equal(calls[0].body.notification_url, 'https://www.flowjesus.com/api/mercadopago/webhook');
     assert.equal(Math.round(calls[0].body.transaction_amount * 100), body.totalCents);
     assert.equal(calls[0].body.payer.email, body.payerEmail);
   });
@@ -174,7 +175,8 @@ test('rejects forged PIX discounts, discount on freight, missing payer and inval
 test('other methods keep the exact existing preference payload with no PIX restrictions', async () => {
   const { post, calls } = setup();
   assert.equal((await post({ ...order(1, 2490), paymentMethod: 'other' })).status, 200);
-  assert.deepEqual(Object.keys(calls[0].body), ['items']);
+  assert.deepEqual(Object.keys(calls[0].body), ['items', 'notification_url']);
+  assert.equal(calls[0].body.notification_url, 'https://www.flowjesus.com/api/mercadopago/webhook');
   assert.equal(calls[0].body.items[0].unit_price, 99);
   assert.equal(calls[0].body.items[1].unit_price, 24.9);
 });
