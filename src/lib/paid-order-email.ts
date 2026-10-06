@@ -51,7 +51,7 @@ function emailPayload(order: PaidOrder, from: string) {
   };
 }
 
-// Called only after signature verification and authoritative reconciliation.
+// Called after authoritative reconciliation by the verified webhook or cron.
 // Read the saved payment association and paid state, never the webhook body.
 export async function notifyPaidOrder(
   db: OrdersDatabase, env: EmailEnvironment, resource: { type: "payment" | "order"; id: string },

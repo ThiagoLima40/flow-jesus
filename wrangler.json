@@ -1,7 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "scripts/worker-entry.js",
   "name": "flow-jesus",
+  "triggers": { "crons": ["*/2 * * * *"] },
+  "vars": { "ORDER_RECOVERY_START_AT": "2026-10-03T00:00:00.000Z" },
   "compatibility_date": "2026-09-08",
   "compatibility_flags": ["nodejs_compat", "disable_nodejs_process_v2", "global_fetch_strictly_public"],
   "observability": {
