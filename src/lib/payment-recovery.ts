@@ -46,7 +46,7 @@ export async function recoverPayments(env: Environment, fetchImpl: typeof fetch 
         const query = new URLSearchParams({ external_reference: order.order_number, status: "approved",
           sort: "date_created", criteria: "desc", limit: "2" });
         const response = await fetchImpl(`https://api.mercadopago.com/v1/payments/search?${query}`, {
-          headers: { Authorization: `Bearer ${token}` }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(8000),
+          headers: { Authorization: `Bearer ${token}` }, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(8000),
         });
         if (!response.ok) throw new Error("Payment search unavailable");
         const data = await response.json() as { results?: { id?: unknown; external_reference?: unknown }[] };

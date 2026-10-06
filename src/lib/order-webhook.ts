@@ -31,7 +31,7 @@ export async function reconcileOrder(db: OrdersDatabase, token: string, resource
   check(/^ORD[A-Z0-9]{26}$/.test(resourceId));
   async function get(path: string) {
     const response = await fetchImpl(`https://api.mercadopago.com${path}`, {
-      headers: { Authorization: `Bearer ${token}` }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(8000),
+      headers: { Authorization: `Bearer ${token}` }, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) throw new PaymentWebhookError(503);
     return object(await response.json());

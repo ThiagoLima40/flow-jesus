@@ -111,7 +111,7 @@ export async function notifyPaidOrder(
       method: "POST", headers: {
         Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json",
         "Idempotency-Key": `flowjesus-paid-order/${order.order_number}`,
-      }, body: frozen.paid_email_payload_json, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000),
+      }, body: frozen.paid_email_payload_json, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(10000),
     });
     // HTTP status is enough to distinguish provider rejection from no request.
     // Never log the payload, authorization header or raw provider error body.

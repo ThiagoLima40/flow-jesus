@@ -63,7 +63,7 @@ async function scenario(method = 'pix', state = 'pending', attach = true) {
     }
     calls.push({ url, options });
     assert.equal(options.headers.Authorization, 'Bearer access-test-token');
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     assert(!options.method || options.method === 'GET');
     if (url === `https://api.mercadopago.com/v1/payments/${number}`) return Response.json(payment);
     if (url === 'https://api.mercadopago.com/users/me') return Response.json(account);
@@ -311,7 +311,7 @@ async function orderScenario(state = 'processed') {
   const fetchImpl = async (url, options) => {
     if (url === 'https://api.resend.com/emails') return s.fetchImpl(url, options);
     assert.equal(options.headers.Authorization, 'Bearer access-test-token');
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     assert(!options.method || options.method === 'GET');
     if (url === `https://api.mercadopago.com/v1/orders/${orderId}`) return Response.json(remote);
     if (url === 'https://api.mercadopago.com/users/me') return Response.json(s.account);

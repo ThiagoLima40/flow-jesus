@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         method: "POST", headers: {
           "x-signature": request.headers.get("x-signature") || "",
           "x-request-id": request.headers.get("x-request-id") || "",
-        }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(45000),
+        }, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(45000),
       });
       console.info("flowjesus_webhook", { stage: "worker_response", status: response.status });
       return reply(response.status === 200 ? 200 : [400, 401, 409].includes(response.status) ? response.status : 503);
