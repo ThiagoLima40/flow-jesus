@@ -40,7 +40,7 @@ export function StreetImage({
   if (src) {
     return (
       <div className={`relative overflow-hidden ${className}`}>
-        <Image src={src} alt={alt} fill priority={priority} sizes={sizes} className={fit === "contain" ? "object-contain" : "object-cover"} />
+        <Image src={src} alt={alt} fill priority={priority} sizes={sizes} unoptimized={src.startsWith("/images/products/jiu-jitsu-lifestyle/")} className={fit === "contain" ? "object-contain" : "object-cover"} />
       </div>
     );
   }

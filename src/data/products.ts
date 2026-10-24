@@ -7,7 +7,7 @@ export type Product = {
   price: number;
   images: string[];
   sharedColorImages?: boolean; // Montagem original que mostra todas as cores cadastradas.
-  category: "camisetas" | "moletons" | "bones" | "acessorios" | "drops";
+  category: "camisetas" | "moletons" | "bones" | "acessorios" | "drops" | "jiu-jitsu-lifestyle";
   sizes: string[];
   colors: { name: string; hex: string }[];
   featured: boolean;
@@ -634,6 +634,102 @@ export const products: Product[] = [
     "accent": "yellow",
     "story": "Ilustração de Jesus acolhendo um jovem nas costas, com referência a Filipenses 4:13 na foto do produto.",
     "biblicalReference": "Filipenses 4:13"
+  },
+  {
+    "id": "flow-ore-treine-repita",
+    "slug": "ore-treine-repita",
+    "name": "Ore. Treine. Repita.",
+    "description": "Camiseta da coleção JIU-JITSU LIFESTYLE. Ore. Treine. Repita. Disponível nas cores branca e preta.",
+    "price": 99,
+    "images": [
+      "/images/products/jiu-jitsu-lifestyle/ore-treine-repita-branca.jpg",
+      "/images/products/jiu-jitsu-lifestyle/ore-treine-repita-preta.jpg"
+    ],
+    "category": "jiu-jitsu-lifestyle",
+    "sizes": [
+      "P",
+      "M",
+      "G",
+      "GG"
+    ],
+    "colors": [
+      {
+        "name": "Branco",
+        "hex": "#f4f1ea"
+      },
+      {
+        "name": "Preto",
+        "hex": "#0a0a0a"
+      }
+    ],
+    "featured": false,
+    "badge": "NOVO",
+    "accent": "cyan",
+    "story": "Oração e treino como parte da rotina. Uma mensagem de fé e constância dentro e fora do tatame."
+  },
+  {
+    "id": "flow-flowjesus-grappling-club",
+    "slug": "flowjesus-grappling-club",
+    "name": "FlowJesus Grappling Club",
+    "description": "Camiseta da coleção JIU-JITSU LIFESTYLE. FlowJesus Grappling Club Disponível nas cores branca e preta.",
+    "price": 99,
+    "images": [
+      "/images/products/jiu-jitsu-lifestyle/flowjesus-grappling-club-branca.jpg",
+      "/images/products/jiu-jitsu-lifestyle/flowjesus-grappling-club-preta.jpg"
+    ],
+    "category": "jiu-jitsu-lifestyle",
+    "sizes": [
+      "P",
+      "M",
+      "G",
+      "GG"
+    ],
+    "colors": [
+      {
+        "name": "Branco",
+        "hex": "#f4f1ea"
+      },
+      {
+        "name": "Preto",
+        "hex": "#0a0a0a"
+      }
+    ],
+    "featured": false,
+    "badge": "NOVO",
+    "accent": "cyan",
+    "story": "Fé e jiu-jitsu em uma estampa que celebra o espírito de comunidade do FlowJesus Grappling Club."
+  },
+  {
+    "id": "flow-base-postura-fe",
+    "slug": "base-postura-fe",
+    "name": "Base. Postura. Fé.",
+    "description": "Camiseta da coleção JIU-JITSU LIFESTYLE. Base. Postura. Fé. Disponível nas cores branca e preta.",
+    "price": 99,
+    "images": [
+      "/images/products/jiu-jitsu-lifestyle/base-postura-fe-branca.jpg",
+      "/images/products/jiu-jitsu-lifestyle/base-postura-fe-preta.jpg"
+    ],
+    "category": "jiu-jitsu-lifestyle",
+    "sizes": [
+      "P",
+      "M",
+      "G",
+      "GG"
+    ],
+    "colors": [
+      {
+        "name": "Branco",
+        "hex": "#f4f1ea"
+      },
+      {
+        "name": "Preto",
+        "hex": "#0a0a0a"
+      }
+    ],
+    "featured": false,
+    "badge": "NOVO",
+    "accent": "cyan",
+    "story": "Base e postura no tatame, fé no coração. Uma mensagem para levar o jiu-jitsu como estilo de vida."
   }
 ];
 
@@ -647,6 +743,7 @@ export function getProductImages(product: Product, color: string) {
 export const categories = [
   { key: "todos", label: "TODOS" },
   { key: "camisetas", label: "CAMISETAS" },
+  { key: "jiu-jitsu-lifestyle", label: "JIU-JITSU LIFESTYLE" },
 ] as const;
 export function getProduct(slug: string) {
   return products.find((p) => p.slug === slug);

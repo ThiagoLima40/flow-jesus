@@ -100,12 +100,23 @@ export function CollectionBrowser() {
   return (
     <section className="bg-street py-14">
       <div className="mx-auto max-w-container px-4 md:px-8">
+        <div className="mb-8 flex flex-col gap-5 border border-brand-cyan/30 border-l-4 border-l-brand-cyan bg-ink-soft p-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="mb-2 font-display text-xs tracking-[0.2em] text-brand-cyan">NOVA COLEÇÃO</p>
+            <h2 className="headline text-3xl md:text-4xl">JIU-JITSU LIFESTYLE</h2>
+            <p className="mt-2 text-sm text-white/70 md:text-base">Fé no coração. Jiu-jitsu como estilo de vida.</p>
+          </div>
+          <button onClick={() => setCat("jiu-jitsu-lifestyle")} className="btn btn-outline shrink-0 justify-center text-xs">
+            EXPLORAR COLEÇÃO
+          </button>
+        </div>
         {/* categorias */}
         <div className="no-scrollbar mb-8 flex gap-2 overflow-x-auto">
           {categories.map((c) => (
             <button
               key={c.key}
               onClick={() => setCat(c.key)}
+              aria-pressed={cat === c.key}
               className={`shrink-0 border px-4 py-2 font-display text-xs tracking-[0.15em] transition-colors ${
                 cat === c.key
                   ? "border-brand-pink bg-brand-pink text-white"
