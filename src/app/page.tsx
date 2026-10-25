@@ -8,6 +8,7 @@ import { Movement } from "@/components/home/Movement";
 import { FinalCta } from "@/components/home/FinalCta";
 import { FlowPlaySpotify } from "@/components/home/FlowPlaySpotify";
 import { InternationalSupport } from "@/components/home/InternationalSupport";
+import { JiuJitsuLifestyleHighlight } from "@/components/home/JiuJitsuLifestyleHighlight";
 
 // Reativar somente após substituir os depoimentos provisórios por relatos reais.
 const showMovementTestimonials = false;
@@ -16,6 +17,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      <JiuJitsuLifestyleHighlight />
       <Marquee items={["FÉ", "DISCIPLINA", "LUTA", "VITÓRIA", "PROPÓSITO"]} className="bg-ink" />
       <BrandValues />
       <FeaturedCollection />

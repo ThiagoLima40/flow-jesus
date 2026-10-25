@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SlidersHorizontal, X } from "lucide-react";
 import { products, categories, type Product } from "@/data/products";
@@ -26,6 +26,13 @@ export function CollectionBrowser() {
   const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>([]);
   const [drawer, setDrawer] = useState(false);
+
+  useEffect(() => {
+    const requestedCategory = new URLSearchParams(window.location.search).get("categoria");
+    if (requestedCategory && categories.some((category) => category.key === requestedCategory)) {
+      setCat(requestedCategory);
+    }
+  }, []);
 
   const toggle = (arr: string[], v: string, set: (x: string[]) => void) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
