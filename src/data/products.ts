@@ -762,7 +762,7 @@ export const products: Product[] = [
   {
     "id": "flow-flowjesus-grappling-club-jesus-salves",
     "slug": "flowjesus-grappling-club-jesus-salves",
-    "name": "FlowJesus Grappling Club — Jesus Salves",
+    "name": "FlowJesus Grappling Club — Jesus Saves",
     "description": "Camiseta da coleção JIU-JITSU LIFESTYLE. Estampa FlowJesus Grappling Club com a mensagem “Jesus Salves”, faixa de jiu-jitsu e detalhes em amarelo.",
     "price": 99,
     "images": [
