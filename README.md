@@ -55,7 +55,9 @@ registra contato, endereço, itens e valores no D1 antes de iniciar o pagamento,
 mantendo a Vercel como frontend/API e o Worker como responsável pela persistência.
 A ativação depende da nova migração e da publicação coordenada do Worker e da Vercel;
 essas ações não fazem parte da implementação local. Veja [ORDERS.md](ORDERS.md)
-para arquitetura, campos, tratamento de falhas, testes e preparação para webhook.
+para arquitetura, campos, tratamento de falhas, testes e ativação do webhook seguro
+`POST /api/mercadopago/webhook`, compatível com `payment` e `order`
+(migrações 0002/0003 e secret de assinatura necessários).
 
 ## Substituir imagens
 

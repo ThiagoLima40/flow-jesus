@@ -730,6 +730,61 @@ export const products: Product[] = [
     "badge": "NOVO",
     "accent": "cyan",
     "story": "Base e postura no tatame, fé no coração. Uma mensagem para levar o jiu-jitsu como estilo de vida."
+  },
+  {
+    "id": "flow-ovelha-perdida-ele-veio-me-buscar",
+    "slug": "ovelha-perdida-ele-veio-me-buscar",
+    "name": "Ovelha Perdida — Ele Veio Me Buscar",
+    "description": "Camiseta da coleção JIU-JITSU LIFESTYLE. Ovelha de quimono com a mensagem “Ele veio me buscar” e a referência Lucas 15:4-6.",
+    "price": 99,
+    "images": [
+      "/images/products/jiu-jitsu-lifestyle/ovelha-perdida-ele-veio-me-buscar-branca.jpg"
+    ],
+    "category": "jiu-jitsu-lifestyle",
+    "sizes": [
+      "P",
+      "M",
+      "G",
+      "GG"
+    ],
+    "colors": [
+      {
+        "name": "Branco",
+        "hex": "#f4f1ea"
+      }
+    ],
+    "featured": false,
+    "badge": "NOVO",
+    "accent": "cyan",
+    "story": "Ovelha de quimono com a mensagem “Ele veio me buscar” e a referência Lucas 15:4-6.",
+    "biblicalReference": "Lucas 15:4-6"
+  },
+  {
+    "id": "flow-flowjesus-grappling-club-jesus-salves",
+    "slug": "flowjesus-grappling-club-jesus-salves",
+    "name": "FlowJesus Grappling Club — Jesus Salves",
+    "description": "Camiseta da coleção JIU-JITSU LIFESTYLE. Estampa FlowJesus Grappling Club com a mensagem “Jesus Salves”, faixa de jiu-jitsu e detalhes em amarelo.",
+    "price": 99,
+    "images": [
+      "/images/products/jiu-jitsu-lifestyle/flowjesus-grappling-club-jesus-salves-preta.jpg"
+    ],
+    "category": "jiu-jitsu-lifestyle",
+    "sizes": [
+      "P",
+      "M",
+      "G",
+      "GG"
+    ],
+    "colors": [
+      {
+        "name": "Preto",
+        "hex": "#0a0a0a"
+      }
+    ],
+    "featured": false,
+    "badge": "NOVO",
+    "accent": "cyan",
+    "story": "Estampa FlowJesus Grappling Club com a mensagem “Jesus Salves”, faixa de jiu-jitsu e detalhes em amarelo."
   }
 ];
 

@@ -9,10 +9,10 @@ const moduleExports = {};
 new Function('exports', compiled.outputText)(moduleExports);
 const { products, getProductImages, getProduct, formatBRL } = moduleExports;
 
-test('22 unique approved prints, each at R$ 99 with P/M/G/GG and no invented stock', () => {
-  assert.equal(products.length, 22);
-  assert.equal(new Set(products.map(p => p.id)).size, 22);
-  assert.equal(new Set(products.map(p => p.slug)).size, 22);
+test('24 unique approved prints, each at R$ 99 with P/M/G/GG and no invented stock', () => {
+  assert.equal(products.length, 24);
+  assert.equal(new Set(products.map(p => p.id)).size, 24);
+  assert.equal(new Set(products.map(p => p.slug)).size, 24);
   for (const p of products) {
     assert.match(p.slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
     assert.equal(p.price, 99);
@@ -24,12 +24,12 @@ test('22 unique approved prints, each at R$ 99 with P/M/G/GG and no invented sto
   }
 });
 
-test('all 67 photos exist and every color gallery stays within its own print', () => {
+test('all 69 photos exist and every color gallery stays within its own print', () => {
   const allImages = products.flatMap(p => p.images);
-  assert.equal(allImages.length, 67);
-  assert.equal(new Set(allImages).size, 67);
+  assert.equal(allImages.length, 69);
+  assert.equal(new Set(allImages).size, 69);
   for (const p of products) {
-    assert.equal(p.colors.length, p.slug === 'tudo-e-possivel' ? 1 : 2);
+    assert.equal(p.colors.length, ['tudo-e-possivel', 'ovelha-perdida-ele-veio-me-buscar', 'flowjesus-grappling-club-jesus-salves'].includes(p.slug) ? 1 : 2);
     assert.equal(p.colors[0].name === 'Branco' || p.colors[0].name === 'Preto', true);
     const gallery = [];
     for (const color of p.colors) {
@@ -58,6 +58,7 @@ test('all 67 photos exist and every color gallery stays within its own print', (
 test('only references explicitly printed on the supplied designs are attributed', () => {
   assert.deepEqual(Object.fromEntries(products.filter(p => p.biblicalReference).map(p => [p.slug, p.biblicalReference])), {
     '70x7': 'Mateus 18:22',
+    'ovelha-perdida-ele-veio-me-buscar': 'Lucas 15:4-6',
     'andamos-por-fe': '2 Coríntios 5:7',
     'tudo-e-possivel': 'Mateus 19:26',
     'you-are-the-salt-of-the-earth': 'Mateus 5:13',

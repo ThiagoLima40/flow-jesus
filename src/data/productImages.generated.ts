@@ -60,6 +60,16 @@ export const productImagesBySlug: Record<string, string[]> = {
   "jesus-is-my-king": [
     "/images/products/jesus-is-my-king/01-montagem-preta-e-branca.jpg"
   ],
+  "jiu-jitsu-lifestyle": [
+    "/images/products/jiu-jitsu-lifestyle/base-postura-fe-branca.jpg",
+    "/images/products/jiu-jitsu-lifestyle/base-postura-fe-preta.jpg",
+    "/images/products/jiu-jitsu-lifestyle/flowjesus-grappling-club-branca.jpg",
+    "/images/products/jiu-jitsu-lifestyle/flowjesus-grappling-club-jesus-salves-preta.jpg",
+    "/images/products/jiu-jitsu-lifestyle/flowjesus-grappling-club-preta.jpg",
+    "/images/products/jiu-jitsu-lifestyle/ore-treine-repita-branca.jpg",
+    "/images/products/jiu-jitsu-lifestyle/ore-treine-repita-preta.jpg",
+    "/images/products/jiu-jitsu-lifestyle/ovelha-perdida-ele-veio-me-buscar-branca.jpg"
+  ],
   "leao-de-juda": [
     "/images/products/leao-de-juda/01-verso-preta.jpg",
     "/images/products/leao-de-juda/02-frente-preta.jpg",
